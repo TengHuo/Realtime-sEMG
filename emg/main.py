@@ -6,29 +6,36 @@
 # @Version  : 1.0.0
 # @License  : MIT
 #
+# 在main.py中训练模型并保存参数和图表
+# 在jupyter中展示和比较模型结果
 
-from scipy.io import loadmat
-import pandas as pd
-import csv
-from os import walk
+# TODO: 先走通一个MLP和一个CNN
 
-for root, dirs, files in walk("./data/Mat_Data/"):
-    print('ROOT:{}'.format(root))
-    print('DIR:{}'.format(dirs))
-    # for filename in files:
-    #     print(filename)
+import os
 
-# mat = loadmat('data/Mat_Data/dba-preprocessed-001/001-001-001.mat')
-# data_array = mat['data']
+# 检查数据是否存在
+data_file_path = ''
+if not os.path.isfile(data_file_path):
+    test = load_capg_all(LoadMode.flat)
+    train, test = capg_split_train_test(test, test_size=0.1)
+    save_capg_to_h5(train, test, data_file_path)
+else:
+    train, test = load_capg_from_h5(data_file_path)
 
-# print(data_array)
+x_train, y_train = prepare_data(train)
+x_test, y_test = prepare_data(test)
 
-# csv_file = open('./test.csv', 'w')
-# writer = csv.writer(csv_file)
-# writer.writerows(data_array)
+# 训练MLP的8 gesture classification模型
+# 固定前几层weights，替换最后一层output为9-20个输出再分别训练
+# 测试模型，保存测试结果
+model = Capg_MLP()
+model.train()
 
-# # write the data in a new csv file
 
-# # print(type(mat))
-# # print(mat.keys())
-# # print(len(mat['data'][0]))
+
+
+# TODO:
+# 依次训练CNN，LSTM，ConvLSTM（待修改为论文的模型）的8 gesture classification模型
+# 修改output层，训练9-20的classification
+# 测试模型
+

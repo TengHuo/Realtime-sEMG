@@ -164,7 +164,7 @@ dmypy.json
 
 ### VisualStudioCode ###
 .vscode/*
-!.vscode/settings.json
+.vscode/settings.json
 !.vscode/tasks.json
 !.vscode/launch.json
 !.vscode/extensions.json
@@ -179,3 +179,4 @@ dmypy.json
 ### Data and Docs ###
 data/
 cache/
+models/

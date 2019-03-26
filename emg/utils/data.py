@@ -14,9 +14,7 @@ import re
 from enum import Enum, unique
 import h5py
 
-# TODO: 1. 添加dbb和dbc的load代码，封装不同格式数据处理的代码
-# TODO: 2. 添加测试
-# TODO: 2. implement a csl data loader
+# TODO: 1. implement a csl data loader
 # TODO: 2. merge capg and csl data loader, train models with all data
 # TODO: 3. implement a data generator for generating triplet pairs
 
@@ -31,15 +29,13 @@ class CapgDBName(Enum):
     
 LoadMode = Enum('LoadMode', ('flat', 'flat_frame', 'sequence', 'sequence_frame'))
 
-
+# TODO: 将函数封装到一个类中
 class CapgData(object):
     pass
 
 def load_capg_all(mode=LoadMode.sequence):
-    # x =（20, None, 128)
-    # y = (20, None, 1)
-    # 一次行读取全部capg数据
-    
+
+    # load three databases of capg    
     dba = _load_capg_data(CapgDBName.dba)
     dbb = _load_capg_data(CapgDBName.dbb)
     dbc = _load_capg_data(CapgDBName.dbc)
@@ -66,7 +62,6 @@ def load_capg_all(mode=LoadMode.sequence):
         elif mode == LoadMode.flat_frame:
             # reshape to (None, 16, 8)
             capg[i] = capg[i].reshape(original_shape[0]*1000, 16, 8, 1)
-        # print(capg[i].shape)
     return capg
 
 def capg_split_train_test(data, test_size=0.2, random_state=None):
@@ -78,13 +73,12 @@ def capg_split_train_test(data, test_size=0.2, random_state=None):
         test_index = np.random.choice(shape[0], int(shape[0]*test_size))
         test[i] = data[i][test_index]
         train[i] = np.delete(data[i], test_index, axis=0)
-        # print(train[i].shape)
-        # print(test[i].shape)
-        # print()
 
     return train, test
 
 def prepare_data(data, required_gestures=8):
+    '''split train and test dataset
+    '''
     required_range = range(required_gestures)
     X = list()
     y = list()
@@ -137,39 +131,41 @@ def _read_capg_mat_files(path, mat_list):
 
 if __name__ == '__main__':
     # For test
-    seq_data_dim = {
-        'dba': (1440, 1000, 128),
-        'dbb': (1600, 1000, 128),
-        'dbc': (1200, 1000, 128)
-    }
-    # for db_name in seq_data_dim.keys():
-    #     x, y, c = load_capg_data(db_name=CapgDBName[db_name])
-    #     assert x.shape == seq_data_dim[db_name]
+    test = load_capg_all(LoadMode.sequence)
+    for i in test.keys():
+        print(test[i].shape)
 
-    # flat_data_dim = {
-    #     'dba': (1440000, 128),
-    #     'dbb': (1600000, 128),
-    #     'dbc': (1200000, 128)
-    # }
-    # for db_name in flat_data_dim.keys():
-    #     x, y, c = load_capg_data(db_name=CapgDBName[db_name], mode=LoadMode.flat)
-    #     print(x.shape)
-    #     assert x.shape == flat_data_dim[db_name]
+    test = load_capg_all(LoadMode.sequence_frame)
+    for i in test.keys():
+        print(test[i].shape)
+
+    test = load_capg_all(LoadMode.flat_frame)
+    for i in test.keys():
+        print(test[i].shape)
+
+    now_path = os.path.join(os.sep, *os.path.dirname(os.path.realpath(__file__)).split(os.sep)[:-2])
+    h5_file_path = os.path.join(now_path, 'cache', 'test.h5')
+
+    if not os.path.isfile(h5_file_path):
+        test = load_capg_all(LoadMode.flat)
+        train, test = capg_split_train_test(test, test_size=0.1)
+        save_capg_to_h5(train, test, h5_file_path)
+    else:
+        train, test = load_capg_from_h5(h5_file_path)
+    
+    x_train, y_train = prepare_data(train)
+    x_test, y_test = prepare_data(test)
+    print(x_train.shape)
+    print(y_train.shape)
+    print()
+    print(x_test)
+    print(y_test)
 
 
-
-
-
-
-
-# import numpy as np
-# from scipy.io import loadmat
-# import os
-# import re
-# import h5py
+# TODO: add data preprocessing code
+# 例如转为RGB，low pass filter等等
 
 # class Preprocess(object):
-
 #     def emg_to_frames(self, emg_data, normal_value=2.5, scale=10000, image_size=(8, 16), rgb=True):
 #         # normalization the data to [0, 1]
 #         emg_data = (emg_data * scale + normal_value*scale) / (normal_value*2*scale)
@@ -189,7 +185,6 @@ if __name__ == '__main__':
 #                 emg_frames[i] = frame_1d
 #         return emg_frames
 
-#     # TODO:
 #     def read_row_data(self, db_name, input_dir):
 #         # input: a directory
 #         # output: gestures
@@ -213,11 +208,3 @@ if __name__ == '__main__':
 #         print(gestures.keys())
 
 #         return gestures
-
-#     # TODO:
-#     def sampling(self, data, percentage):
-#         pass
-
-
-
-# # TODO: 添加单元测试
