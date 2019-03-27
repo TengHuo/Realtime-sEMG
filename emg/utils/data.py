@@ -7,6 +7,7 @@
 # @License  : MIT
 #
 #
+
 import numpy as np
 import os
 from scipy.io import loadmat
@@ -26,15 +27,12 @@ class CapgDBName(Enum):
     dbb = 'dbb'
     # gesture index: {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 100, 101}
     dbc = 'dbc'
-    
+
+
 LoadMode = Enum('LoadMode', ('flat', 'flat_frame', 'sequence', 'sequence_frame'))
 
-# TODO: 将函数封装到一个类中
-class CapgData(object):
-    pass
 
-def load_capg_all(mode=LoadMode.sequence):
-
+def load_capg_all():
     # load three databases of capg    
     dba = _load_capg_data(CapgDBName.dba)
     dbb = _load_capg_data(CapgDBName.dbb)
@@ -49,34 +47,24 @@ def load_capg_all(mode=LoadMode.sequence):
         capg_index = i + 7
         capg[capg_index] = np.asarray(dbc[i])
 
-    for i in capg.keys():
-        original_shape = capg[i].shape
-        if mode == LoadMode.sequence:
-            # default shape (None, 1000, 128): sequence mode
-            continue
-        elif mode == LoadMode.sequence_frame:
-            capg[i] = capg[i].reshape(original_shape[0], 1000, 16, 8, 1)
-        elif mode == LoadMode.flat:
-            # reshape to (None, 128)
-            capg[i] = capg[i].reshape(original_shape[0]*1000, 128)
-        elif mode == LoadMode.flat_frame:
-            # reshape to (None, 16, 8)
-            capg[i] = capg[i].reshape(original_shape[0]*1000, 16, 8, 1)
     return capg
 
-def capg_split_train_test(data, test_size=0.2, random_state=None):
-    train = {gesture_index: None for gesture_index in range(20)}
-    test = {gesture_index: None for gesture_index in range(20)}
+
+def capg_train_test_split(data, test_size=0.1):
+    train = dict()
+    test = dict()
 
     for i in data.keys():
         shape = data[i].shape
-        test_index = np.random.choice(shape[0], int(shape[0]*test_size))
+        test_index = np.random.choice(shape[0], int(shape[0]*test_size), replace=False)
+        train_index = np.delete(np.arange(shape[0]), test_index)
         test[i] = data[i][test_index]
-        train[i] = np.delete(data[i], test_index, axis=0)
+        train[i] = data[i][train_index]
 
     return train, test
 
-def prepare_data(data, required_gestures=8):
+
+def prepare_data(data, required_gestures=8, mode=LoadMode.sequence):
     '''split train and test dataset
     '''
     required_range = range(required_gestures)
@@ -88,19 +76,53 @@ def prepare_data(data, required_gestures=8):
         y += [i for _ in range(amount)]
     X = np.concatenate(X, axis=0)
     y = np.asarray(y)
+
+    original_shape = X.shape
+    if mode == LoadMode.sequence:
+        # default shape (None, 1000, 128): sequence mode
+        pass
+    elif mode == LoadMode.sequence_frame:
+        X = X.reshape(original_shape[0], 1000, 16, 8, 1)
+    elif mode == LoadMode.flat:
+        # reshape to (None, 128)
+        X = X.reshape(original_shape[0]*1000, 128)
+        y = y.reshape((y.shape[0], 1)) * np.ones((1, 1000))
+        y = y.flatten()
+    elif mode == LoadMode.flat_frame:
+        # reshape to (None, 16, 8)
+        X = X.reshape(original_shape[0]*1000, 16, 8, 1)
+        y = y.reshape((y.shape[0], 1)) * np.ones((1, 1000))
+        y = y.flatten()
+
     return X, y
+
 
 def load_capg_from_h5(file_name):
     with h5py.File(file_name, 'r') as data_file:
-        train = np.array(data_file['train'])
-        test = np.array(data_file['test'])
+        train = dict()
+        train_grp = data_file['train']
+        print()
+        for i in train_grp.keys():
+            train[int(i)] = train_grp[i].value
+
+        test = dict()
+        test_grp = data_file['test']
+        for i in test_grp.keys():
+            test[int(i)] = test_grp[i].value
+
     return train, test
+
 
 def save_capg_to_h5(train, test, file_name):
     with h5py.File(file_name, 'w') as data_file:
-        data_file.create_dataset('train', data=train, dtype=np.float)
-        data_file.create_dataset('test', data=test, dtype=np.float)
-        
+        train_grp = data_file.create_group('train')
+        for gesture in train.keys():
+            train_grp.create_dataset(str(gesture), data=train[gesture], dtype=float)
+
+        test_grp = data_file.create_group('test')
+        for gesture in test.keys():
+            test_grp.create_dataset(str(gesture), data=test[gesture], dtype=float)
+
 def _load_capg_data(db_name):
     # get the parent dir path
     now_path = os.path.join(os.sep, *os.path.dirname(os.path.realpath(__file__)).split(os.sep)[:-2])
@@ -109,6 +131,7 @@ def _load_capg_data(db_name):
     emg_data = _read_capg_mat_files(data_path, mat_list)
     
     return emg_data
+
 
 def _read_capg_mat_files(path, mat_list):
     data = dict()
@@ -131,80 +154,44 @@ def _read_capg_mat_files(path, mat_list):
 
 if __name__ == '__main__':
     # For test
-    test = load_capg_all(LoadMode.sequence)
-    for i in test.keys():
-        print(test[i].shape)
-
-    test = load_capg_all(LoadMode.sequence_frame)
-    for i in test.keys():
-        print(test[i].shape)
-
-    test = load_capg_all(LoadMode.flat_frame)
-    for i in test.keys():
-        print(test[i].shape)
-
     now_path = os.path.join(os.sep, *os.path.dirname(os.path.realpath(__file__)).split(os.sep)[:-2])
     h5_file_path = os.path.join(now_path, 'cache', 'test.h5')
 
     if not os.path.isfile(h5_file_path):
-        test = load_capg_all(LoadMode.flat)
-        train, test = capg_split_train_test(test, test_size=0.1)
+        test = load_capg_all()
+        train, test = capg_train_test_split(test, test_size=0.1)
         save_capg_to_h5(train, test, h5_file_path)
     else:
         train, test = load_capg_from_h5(h5_file_path)
-    
-    x_train, y_train = prepare_data(train)
-    x_test, y_test = prepare_data(test)
+
+    x_train, y_train = prepare_data(train, mode=LoadMode.sequence)
+    x_test, y_test = prepare_data(test, mode=LoadMode.sequence)
     print(x_train.shape)
     print(y_train.shape)
+    print(x_test.shape)
+    print(y_test.shape)
     print()
-    print(x_test)
-    print(y_test)
 
+    x_train, y_train = prepare_data(train, mode=LoadMode.flat)
+    x_test, y_test = prepare_data(test, mode=LoadMode.flat)
+    print(x_train.shape)
+    print(y_train.shape)
+    print(x_test.shape)
+    print(y_test.shape)
+    print()
 
-# TODO: add data preprocessing code
-# 例如转为RGB，low pass filter等等
+    x_train, y_train = prepare_data(train, mode=LoadMode.flat_frame)
+    x_test, y_test = prepare_data(test, mode=LoadMode.flat_frame)
+    print(x_train.shape)
+    print(y_train.shape)
+    print(x_test.shape)
+    print(y_test.shape)
+    print()
 
-# class Preprocess(object):
-#     def emg_to_frames(self, emg_data, normal_value=2.5, scale=10000, image_size=(8, 16), rgb=True):
-#         # normalization the data to [0, 1]
-#         emg_data = (emg_data * scale + normal_value*scale) / (normal_value*2*scale)
-#         if rgb:
-#             frames_size = (emg_data.shape[0], image_size[0], image_size[1], 3)
-#         else:
-#             frames_size = (emg_data.shape[0], image_size[0], image_size[1], 1)
-#         emg_frames = np.empty(frames_size)
-#         for i in range(emg_data.shape[0]):
-#             frame = np.reshape(emg_data[i], image_size)
-#             if rgb:
-#                 # replicate three times as RGB channel
-#                 frame_3d = frame[:,:,None] * np.ones(3, dtype=int)[None,None,:]
-#                 emg_frames[i] = frame_3d
-#             else:
-#                 frame_1d = frame
-#                 emg_frames[i] = frame_1d
-#         return emg_frames
-
-#     def read_row_data(self, db_name, input_dir):
-#         # input: a directory
-#         # output: gestures
-
-#         # DB_NAME = db_name
-#         # INPUT_DIR = '../data/capg_raw/'
-
-#         gestures = dict()
-#         for root, directories, files in os.walk(input_dir):
-#             if not re.search(db_name, root):
-#                 continue
-#             print('root:{}, directories:{}, files: {}'.format(root, len(directories), len(files)))
-#             for file in files:
-#                 gesture_num = file[4:7]
-#                 if gesture_num not in gestures.keys():
-#                     gestures[gesture_num] = list()
-#                 file_loc = os.path.join(root, file)
-#                 mat = loadmat(file_loc)
-#                 gestures[gesture_num].append(convert_emg(mat))
-
-#         print(gestures.keys())
-
-#         return gestures
+    x_train, y_train = prepare_data(train, mode=LoadMode.sequence_frame)
+    x_test, y_test = prepare_data(test, mode=LoadMode.sequence_frame)
+    print(x_train.shape)
+    print(y_train.shape)
+    print(x_test.shape)
+    print(y_test.shape)
+    print()

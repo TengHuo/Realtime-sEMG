@@ -1,5 +1,5 @@
 # -*- coding: UTF-8 -*-
-# CNN.py
+# capg_cnn.py
 # @Time     : 22/Mar/2019
 # @Auther   : TENG HUO
 # @Email    : teng_huo@outlook.com
@@ -7,3 +7,8 @@
 # @License  : MIT
 #
 #
+
+from ._model import CapgModel
+
+class CapgCNN(CapgModel):
+    pass

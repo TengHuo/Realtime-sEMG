@@ -1,3 +1,4 @@
+# -*- coding: UTF-8 -*-
 # example code to load data from the csl-hdemg dataset
 
 import matplotlib.pyplot as plt
