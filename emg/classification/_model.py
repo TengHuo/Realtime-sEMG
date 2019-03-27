@@ -13,6 +13,7 @@
 import numpy as np
 import os
 import h5py
+import pickle
 
 from tensorflow.keras.callbacks import TensorBoard, LearningRateScheduler
 from tensorflow.keras.optimizers import SGD
@@ -44,11 +45,15 @@ class CapgModel(object):
         # 返回模型相关的文件路径
         file_names = dict()
         root_path = os.path.join(os.sep, *os.path.dirname(os.path.realpath(__file__)).split(os.sep)[:-2])
-        model_folder = os.path.join(root_path, 'model', model_name)
+        model_folder = os.path.join(root_path, 'models', model_name)
+
+        # create a folder for storing models
+        if not os.path.isdir(model_folder):
+            os.mkdir(model_folder)
 
         file_names['weights_file'] = os.path.join(model_folder, 'weights.h5')
         file_names['model_file'] = os.path.join(model_folder, 'model.h5')
-        file_names['history'] = os.path.join(model_folder, 'history.h5')
+        file_names['history'] = os.path.join(model_folder, 'history')
 
         return file_names
 
@@ -70,13 +75,15 @@ class CapgModel(object):
     def train_history(self):
         # 载入模型训练history
         if self.__history is None:
-            with h5py.File(self.files_path['history'], 'r') as history_file:
-                self.__history = history_file['history']
+            with open(self.files_path['history'], 'r') as history_file:
+                self.__history = pickle.load(history_file)
         return self.__history
 
     @train_history.setter
     def train_history(self, history):
         self.__history = history
+        with open(self.files_path['history'], 'wb') as history_file:
+            pickle.dump(history, history_file)
 
 
     def compile_model(self, optimizer=None):
@@ -88,9 +95,10 @@ class CapgModel(object):
 
 
     def train_model(self, x_train, y_train, val_split=0.01, callbacks=None):
-        self.train_history = self.model.fit(x_train, y_train, batch_size=self.batch_size, epochs=self.epoch,
+        history = self.model.fit(x_train, y_train, batch_size=self.batch_size, epochs=self.epoch,
                     validation_split=val_split, callbacks=callbacks)
         self.save_model()
+        self.train_history = history.history
         return self.train_history
 
     def lr_tuner_configure(self, lr_list):

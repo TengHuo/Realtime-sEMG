@@ -14,6 +14,7 @@
 from utils import *
 from classification import CapgMLP
 import os
+import matplotlib.pyplot as plt
 
 # 检查数据是否存在
 root_path = os.path.join(os.sep, *os.path.dirname(os.path.realpath(__file__)).split(os.sep)[:-1])
@@ -30,17 +31,32 @@ else:
 x_train, y_train = prepare_data(train, mode=LoadMode.flat)
 x_test, y_test = prepare_data(test, mode=LoadMode.flat)
 
-print(x_train.shape)
-print(y_train.shape)
-print(x_test.shape)
-print(y_test.shape)
-print()
+# print(x_train.shape)
+# print(y_train.shape)
+# print(x_test.shape)
+# print(y_test.shape)
+# print(set(y_train))
+# print(set(y_test))
 
+print('data load complete, start train model')
 # 训练MLP的8 gesture classification模型
 # 固定前几层weights，替换最后一层output为9-20个输出再分别训练
 # 测试模型，保存测试结果
-# mlp = CapgMLP('MLP', epoch=1)
-# history = mlp.train_model(x_train, x_test, val_split=0.01)
+
+mlp = CapgMLP('MLP', epoch=1)
+summary = mlp.compile_model()
+print(summary)
+history = mlp.train_model(x_train, y_train, val_split=0.01)
+
+plt.plot(history['acc'])
+plt.plot(history['val_acc'])
+plt.title('Model accuracy')
+plt.ylabel('Accuracy')
+plt.xlabel('Epoch')
+plt.legend(['Train', 'Test'], loc='upper left')
+plt.show()
+
+
 
 
 

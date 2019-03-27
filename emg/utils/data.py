@@ -13,6 +13,7 @@ import os
 from scipy.io import loadmat
 import re
 from enum import Enum, unique
+from tensorflow.keras import utils
 import h5py
 
 # TODO: 1. implement a csl data loader
@@ -94,6 +95,7 @@ def prepare_data(data, required_gestures=8, mode=LoadMode.sequence):
         y = y.reshape((y.shape[0], 1)) * np.ones((1, 1000))
         y = y.flatten()
 
+    y = utils.to_categorical(y, required_gestures)
     return X, y
 
 
