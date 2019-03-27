@@ -9,8 +9,6 @@
 # 在main.py中训练模型并保存参数和图表
 # 在jupyter中展示和比较模型结果
 
-# TODO: 先走通一个MLP和一个CNN
-
 from utils import *
 from classification import CapgMLP
 import os
@@ -28,35 +26,20 @@ else:
     print('data exist, load data from the file')
     train, test = load_capg_from_h5(data_file_path)
 
-x_train, y_train = prepare_data(train, mode=LoadMode.flat)
-x_test, y_test = prepare_data(test, mode=LoadMode.flat)
-
-# print(x_train.shape)
-# print(y_train.shape)
-# print(x_test.shape)
-# print(y_test.shape)
-# print(set(y_train))
-# print(set(y_test))
-
 print('data load complete, start train model')
 # 训练MLP的8 gesture classification模型
 # 固定前几层weights，替换最后一层output为9-20个输出再分别训练
 # 测试模型，保存测试结果
 
-mlp = CapgMLP('MLP', epoch=1)
-summary = mlp.compile_model()
-print(summary)
-history = mlp.train_model(x_train, y_train, val_split=0.01)
+for gesture_amount in range(8, 21):
+    x_train, y_train = prepare_data(train, required_gestures=gesture_amount,
+                                    mode=LoadMode.flat)
 
-plt.plot(history['acc'])
-plt.plot(history['val_acc'])
-plt.title('Model accuracy')
-plt.ylabel('Accuracy')
-plt.xlabel('Epoch')
-plt.legend(['Train', 'Test'], loc='upper left')
-plt.show()
-
-
+    mlp = CapgMLP('MLP', epoch=20, output_size=gesture_amount)
+    mlp.build_mlp()
+    mlp.train(x_train, y_train, val_split=0.01)
+    history = mlp.train_history
+    print(history)
 
 
 

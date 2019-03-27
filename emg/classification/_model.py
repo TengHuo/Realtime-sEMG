@@ -15,6 +15,7 @@ import os
 import h5py
 import pickle
 
+from tensorflow.keras.layers import Dense
 from tensorflow.keras.callbacks import TensorBoard, LearningRateScheduler
 from tensorflow.keras.optimizers import SGD
 from tensorflow.keras import backend as K
@@ -28,12 +29,13 @@ class CapgModel(object):
 
     模型保存和载入
     '''
-    def __init__(self, model_name, batch_size=128, epoch=60):
+    def __init__(self, model_name, batch_size=128, epoch=60, output_size=8):
         # 初始化模型参数
         self.batch_size = batch_size
         self.epoch = epoch
         self.model = None
-        self.files_path = self._generate_files_path(model_name)
+        self.output_size = output_size
+        self.files_path = self.__generate_files_path(model_name)
 
         config = ConfigProto()
         config.gpu_options.allow_growth = True
@@ -41,9 +43,9 @@ class CapgModel(object):
         K.set_session(session)  # set this TensorFlow session as the default session for Keras
 
 
-    def _generate_files_path(self, model_name):
+    def __generate_files_path(self, model_name):
         # 返回模型相关的文件路径
-        file_names = dict()
+        files_path = dict()
         root_path = os.path.join(os.sep, *os.path.dirname(os.path.realpath(__file__)).split(os.sep)[:-2])
         model_folder = os.path.join(root_path, 'models', model_name)
 
@@ -51,18 +53,29 @@ class CapgModel(object):
         if not os.path.isdir(model_folder):
             os.mkdir(model_folder)
 
-        file_names['weights_file'] = os.path.join(model_folder, 'weights.h5')
-        file_names['model_file'] = os.path.join(model_folder, 'model.h5')
-        file_names['history'] = os.path.join(model_folder, 'history')
+        file_name = 'weights-{}.h5'.format(self.output_size)
+        files_path['weights_file'] = os.path.join(model_folder, file_name)
+        file_name = 'model-{}.h5'.format(self.output_size)
+        files_path['model_file'] = os.path.join(model_folder, file_name)
+        file_name = 'history-{}'.format(self.output_size)
+        files_path['history'] = os.path.join(model_folder, file_name)
+        if self.output_size > 8:
+            file_name = 'weights-{}.h5'.format(self.output_size-1)
+        files_path['trained_weights'] = os.path.join(model_folder, file_name)
 
-        return file_names
+        return files_path
 
     def load_model(self, model_configure):
         model = model_configure()
-
-        if os.path.exists(self.files_path['weights_file']): # model exist
+        if 'trained_weights' in self.files_path.keys():
+            if os.path.exists(self.files_path['trained_weights']): # model exist
+                model.load_weights(self.files_path['trained_weights'], by_name=True)
+        elif os.path.exists(self.files_path['weights_file']): # model exist
             model.load_weights(self.files_path['weights_file'], by_name=True)
 
+        output_layer_name = 'output_{}'.format(self.output_size)
+        model.add(Dense(self.output_size, activation='softmax',
+                        name=output_layer_name))
         return model
 
     def save_model(self):
@@ -100,6 +113,15 @@ class CapgModel(object):
         self.save_model()
         self.train_history = history.history
         return self.train_history
+
+    def set_output_size(self, size=8):
+        self.output_size = size
+
+    def add_output_layer(self, out_size=8):
+        self.output_size = out_size
+        self.model.layers.pop()
+        layer_name = 'output_{}'.format(out_size)
+        return Dense(out_size, activation='softmax', name=layer_name)
 
     def lr_tuner_configure(self, lr_list):
         '''TODO: 用python的装饰器包装一个learning rate scheduler

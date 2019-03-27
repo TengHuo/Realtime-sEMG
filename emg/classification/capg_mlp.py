@@ -39,22 +39,22 @@ def _model_configure():
     model.add(Activation('relu'))
     model.add(Dropout(rate=0.2, name='dp_3'))
 
-    model.add(Dense(8, activation='softmax', name='output'))
-
     return model
 
 # my_optimizer = Adam
-my_optimizer = None
+_my_optimizer = None
 
 class CapgMLP(CapgModel):
-    def __init__(self, model_name='MLP', batch_size=128, epoch=60):
-        CapgModel.__init__(self, model_name, batch_size, epoch)
+    def __init__(self, model_name='MLP', batch_size=128, epoch=60, output_size=8):
+        CapgModel.__init__(self, model_name, batch_size, epoch, output_size)
 
+    def build_mlp(self):
         self.model = self.load_model(_model_configure)
+        summary = self.compile_model(_my_optimizer)
+        print(summary)
+        return summary
 
-    def train_mlp(self, x_train, y_train, val_split=0.01):
-        model_summary = self.compile_model(my_optimizer)
-        print(model_summary)
+    def train(self, x_train, y_train, val_split=0.01):
         self.train_model(x_train, y_train, val_split)
 
 
