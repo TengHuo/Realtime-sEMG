@@ -57,11 +57,3 @@ class CapgMLP(CapgModel):
 
     def train(self, x_train, y_train, val_split=0.01):
         self.train_model(x_train, y_train, val_split)
-
-
-if __name__ == "__main__":
-    # TODO: 测试模型
-    test = CapgMLP('test')
-    print(test.files_path)
-
-
