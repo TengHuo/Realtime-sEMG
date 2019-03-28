@@ -49,7 +49,7 @@ class CapgMLP(CapgModel):
     def __init__(self, model_name='MLP', batch_size=128, epoch=60, output_size=8):
         CapgModel.__init__(self, model_name, batch_size, epoch, output_size)
 
-    def build_mlp(self):
+    def build_model(self):
         self.model = self.load_model(_model_configure)
         summary = self.compile_model(_my_optimizer)
         return summary

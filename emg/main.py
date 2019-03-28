@@ -10,7 +10,7 @@
 # 在jupyter中展示和比较模型结果
 
 from utils import *
-from classification import CapgMLP
+from classification import CapgMLP, CapgCNN
 import os
 
 # 检查数据是否存在
@@ -32,17 +32,30 @@ print('data load complete, start train model')
 
 for gesture_amount in range(8, 21):
     x_train, y_train = prepare_data(train, required_gestures=gesture_amount,
-                                    mode=LoadMode.flat)
+                                    mode=LoadMode.flat_frame)
     x_test, y_test = prepare_data(test, required_gestures=gesture_amount,
-                                  mode=LoadMode.flat)
+                                  mode=LoadMode.flat_frame)
 
-    mlp = CapgMLP('MLP', epoch=30, output_size=gesture_amount)
-    model_summary = mlp.build_mlp()
+    # mlp = CapgMLP('MLP', epoch=30, output_size=gesture_amount)
+    # model_summary = mlp.build_model()
+    # print(model_summary)
+
+    # history = mlp.train(x_train, y_train, val_split=0.01)
+    # history['score'] = mlp.evaluate_model(x_test, y_test)
+    # save_history(history, mlp.files_path['history'])
+    # print(history)
+
+    x_train = x_train[0:1280]
+    y_train = y_train[0:1280]
+    x_test = x_test[0:1280]
+    y_test = y_test[0:1280]
+    cnn = CapgCNN('CNN', epoch=60, output_size=gesture_amount)
+    model_summary = cnn.build_model()
     print(model_summary)
 
-    history = mlp.train(x_train, y_train, val_split=0.01)
-    history['score'] = mlp.evaluate_model(x_test, y_test)
-    save_history(history, mlp.files_path['history'])
+    history = cnn.train(x_train, y_train, val_split=0.01)
+    history['score'] = cnn.evaluate_model(x_test, y_test)
+    save_history(history, cnn.files_path['history'])
     print(history)
 
     # for test
