@@ -1,5 +1,6 @@
 # Personal Setting #
 ### Data and Docs ###
+.env
 data/
 cache/
 models/
