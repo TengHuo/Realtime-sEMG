@@ -40,11 +40,11 @@ class CapgModel(object):
         # 返回模型相关的文件路径
         files_path = dict()
         root_path = os.path.join(os.sep, *os.path.dirname(os.path.realpath(__file__)).split(os.sep)[:-2])
-        model_folder = os.path.join(root_path, 'models', model_name)
+        model_folder = os.path.join(root_path, 'models', model_name, '{}'.format(self.output_size))
 
         # create a folder for storing models
         if not os.path.isdir(model_folder):
-            os.mkdir(model_folder)
+            os.makedirs(model_folder)
 
         file_name = 'weights-{}.h5'.format(self.output_size)
         files_path['weights_file'] = os.path.join(model_folder, file_name)
@@ -60,7 +60,8 @@ class CapgModel(object):
 
         if self.output_size > 8:
             file_name = 'weights-{}.h5'.format(self.output_size-1)
-        files_path['trained_weights'] = os.path.join(model_folder, file_name)
+            files_path['trained_weights'] = os.path.join(root_path, 'models', model_name,
+                                                         '{}'.format(self.output_size-1), file_name)
 
         return files_path
 

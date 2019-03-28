@@ -36,7 +36,7 @@ for gesture_amount in range(8, 21):
     x_test, y_test = prepare_data(test, required_gestures=gesture_amount,
                                   mode=LoadMode.flat)
 
-    mlp = CapgMLP('MLP', epoch=1, output_size=gesture_amount)
+    mlp = CapgMLP('MLP', epoch=30, output_size=gesture_amount)
     model_summary = mlp.build_mlp()
     print(model_summary)
 
@@ -46,7 +46,7 @@ for gesture_amount in range(8, 21):
     print(history)
 
     # for test
-    break
+    # break
 
 
 
