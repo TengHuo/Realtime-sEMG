@@ -1,7 +1,7 @@
 # -*- coding: UTF-8 -*-
 # preprocess.py
 # @Time     : 27/Mar/2019
-# @Auther   : TENG HUO
+# @Author   : TENG HUO
 # @Email    : teng_huo@outlook.com
 # @Version  : 1.0.0
 # @License  : MIT

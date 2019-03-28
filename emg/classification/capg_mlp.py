@@ -1,7 +1,7 @@
 # -*- coding: UTF-8 -*-
 # capg_mlp.py
 # @Time     : 22/Mar/2019
-# @Auther   : TENG HUO
+# @Author   : TENG HUO
 # @Email    : teng_huo@outlook.com
 # @Version  : 1.0.0
 # @License  : MIT
@@ -12,12 +12,11 @@
 # 1. 如何导入同一目录下的类，python的包管理
 # 2. 相对路径问题
 
-# TODO: 完成MLP和CNN两个模型类
 
 from ._model import CapgModel
-import tensorflow as tf
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Dense, Dropout, BatchNormalization, Activation
+
 from tensorflow.keras.optimizers import Adam
 
 
@@ -41,8 +40,10 @@ def _model_configure():
 
     return model
 
-# my_optimizer = Adam
+
+# my_optimizer = Adam()
 _my_optimizer = None
+
 
 class CapgMLP(CapgModel):
     def __init__(self, model_name='MLP', batch_size=128, epoch=60, output_size=8):
@@ -57,5 +58,10 @@ class CapgMLP(CapgModel):
     def train(self, x_train, y_train, val_split=0.01):
         self.train_model(x_train, y_train, val_split)
 
+
+if __name__ == "__main__":
+    # TODO: 测试模型
+    test = CapgMLP('test')
+    print(test.files_path)
 
 

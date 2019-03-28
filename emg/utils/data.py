@@ -1,7 +1,7 @@
 # -*- coding: UTF-8 -*-
 # data.py
 # @Time     : 22/Mar/2019
-# @Auther   : TENG HUO
+# @Author   : TENG HUO
 # @Email    : teng_huo@outlook.com
 # @Version  : 1.0.0
 # @License  : MIT
@@ -155,6 +155,7 @@ def _read_capg_mat_files(path, mat_list):
 
 
 if __name__ == '__main__':
+    # TODO: 修改为单元测试
     # For test
     now_path = os.path.join(os.sep, *os.path.dirname(os.path.realpath(__file__)).split(os.sep)[:-2])
     h5_file_path = os.path.join(now_path, 'cache', 'test.h5')
@@ -197,3 +198,11 @@ if __name__ == '__main__':
     print(x_test.shape)
     print(y_test.shape)
     print()
+
+    # test the function prepare_data with different amount of gestures
+    for i in range(8, 21):
+        _, y_train = prepare_data(train, required_gestures=i, mode=LoadMode.sequence_frame)
+        _, y_test = prepare_data(test, mode=LoadMode.sequence_frame)
+        print('train set gestures: {}'.format(set(y_train)))
+        print('test set gestures: {}'.format(set(y_test)))
+        print()

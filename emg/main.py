@@ -1,7 +1,7 @@
 # -*- coding: UTF-8 -*-
 # main.py
 # @Time     : 13/Dec/2018
-# @Auther   : TENG HUO
+# @Author   : TENG HUO
 # @Email    : teng_huo@outlook.com
 # @Version  : 1.0.0
 # @License  : MIT
