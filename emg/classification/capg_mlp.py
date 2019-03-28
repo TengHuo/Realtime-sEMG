@@ -52,8 +52,7 @@ class CapgMLP(CapgModel):
     def build_mlp(self):
         self.model = self.load_model(_model_configure)
         summary = self.compile_model(_my_optimizer)
-        print(summary)
         return summary
 
     def train(self, x_train, y_train, val_split=0.01):
-        self.train_model(x_train, y_train, val_split)
+        return self.train_model(x_train, y_train, val_split)

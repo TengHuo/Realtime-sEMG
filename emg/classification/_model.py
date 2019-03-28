@@ -11,7 +11,6 @@
 
 
 import os
-import pickle
 
 from tensorflow.keras.layers import Dense
 from tensorflow.keras.callbacks import CSVLogger, LearningRateScheduler
@@ -30,7 +29,6 @@ class CapgModel(object):
         self.epoch = epoch
         self.model = None
         self.output_size = output_size
-        self.__history = None
         self.files_path = self.__generate_files_path(model_name)
 
         config = ConfigProto()
@@ -90,17 +88,11 @@ class CapgModel(object):
 
     @property
     def train_history(self):
-        # load trained model's history
-        if self.__history is None:
-            with open(self.files_path['history'], 'r') as history_file:
-                self.__history = pickle.load(history_file)
         return self.__history
 
     @train_history.setter
     def train_history(self, history):
         self.__history = history
-        with open(self.files_path['history'], 'wb') as history_file:
-            pickle.dump(history, history_file)
 
     def compile_model(self, optimizer=None):
         if optimizer is None:
@@ -121,6 +113,10 @@ class CapgModel(object):
         self.save_model()
         self.train_history = history.history
         return self.train_history
+
+    def evaluate_model(self, x_test, y_test):
+        score = self.model.evaluate(x=x_test, y=y_test, batch_size=self.batch_size)
+        return score
 
     def set_output_size(self, size=8):
         self.output_size = size

@@ -12,7 +12,6 @@
 from utils import *
 from classification import CapgMLP
 import os
-import matplotlib.pyplot as plt
 
 # 检查数据是否存在
 root_path = os.path.join(os.sep, *os.path.dirname(os.path.realpath(__file__)).split(os.sep)[:-1])
@@ -34,12 +33,20 @@ print('data load complete, start train model')
 for gesture_amount in range(8, 21):
     x_train, y_train = prepare_data(train, required_gestures=gesture_amount,
                                     mode=LoadMode.flat)
+    x_test, y_test = prepare_data(test, required_gestures=gesture_amount,
+                                  mode=LoadMode.flat)
 
-    mlp = CapgMLP('MLP', epoch=20, output_size=gesture_amount)
-    mlp.build_mlp()
-    mlp.train(x_train, y_train, val_split=0.01)
-    history = mlp.train_history
+    mlp = CapgMLP('MLP', epoch=1, output_size=gesture_amount)
+    model_summary = mlp.build_mlp()
+    print(model_summary)
+
+    history = mlp.train(x_train, y_train, val_split=0.01)
+    history['score'] = mlp.evaluate_model(x_test, y_test)
+    save_history(history, mlp.files_path['history'])
     print(history)
+
+    # for test
+    break
 
 
 

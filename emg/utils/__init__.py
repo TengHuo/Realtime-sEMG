@@ -4,6 +4,7 @@ from .data import capg_train_test_split
 from .data import prepare_data
 from .data import load_capg_from_h5
 from .data import save_capg_to_h5
+from .data import save_history, load_history
 
 
 __all__ = [
@@ -12,4 +13,5 @@ __all__ = [
     'capg_train_test_split',
     'prepare_data',
     'load_capg_from_h5',
-    'save_capg_to_h5']
+    'save_capg_to_h5',
+    'save_history']

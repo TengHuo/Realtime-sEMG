@@ -10,6 +10,7 @@
 
 import numpy as np
 import os
+import pickle
 from scipy.io import loadmat
 import re
 from enum import Enum, unique
@@ -152,3 +153,13 @@ def _read_capg_mat_files(path, mat_list):
         data[gesture_index].append(mat['data'])
 
     return data
+
+
+def load_history(file_path):
+    with open(file_path, 'r') as history_file:
+        return pickle.load(history_file)
+
+
+def save_history(history, path):
+    with open(path, 'wb') as history_file:
+        pickle.dump(history, history_file)
