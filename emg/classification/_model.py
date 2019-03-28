@@ -67,11 +67,14 @@ class CapgModel(object):
 
     def load_model(self, model_configure):
         model = model_configure()
-        if 'trained_weights' in self.files_path.keys():
+
+        if os.path.exists(self.files_path['weights_file']):
+            # model exist, load weights
+            model.load_weights(self.files_path['weights_file'], by_name=True)
+        elif 'trained_weights' in self.files_path.keys():
+            # model doesn't exist, check if there previous model trained
             if os.path.exists(self.files_path['trained_weights']): # model exist
                 model.load_weights(self.files_path['trained_weights'], by_name=True)
-        elif os.path.exists(self.files_path['weights_file']): # model exist
-            model.load_weights(self.files_path['weights_file'], by_name=True)
 
         output_layer_name = 'output_{}'.format(self.output_size)
         model.add(Dense(self.output_size, activation='softmax',
