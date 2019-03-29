@@ -6,17 +6,12 @@
 # @Version  : 1.0.0
 # @License  : MIT
 #
-#
-
-# 需要解决的问题：
-# 1. 如何导入同一目录下的类，python的包管理
-# 2. 相对路径问题
+# Multilayer perceptron model for gesture classification
 
 
 from ._model import CapgModel
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Dense, Dropout, BatchNormalization, Activation
-
 from tensorflow.keras.optimizers import Adam
 
 
@@ -50,7 +45,7 @@ class CapgMLP(CapgModel):
         CapgModel.__init__(self, model_name, batch_size, epoch, output_size)
 
     def build_model(self):
-        self.model = self.load_model(_model_configure)
+        self.load_model(_model_configure)
         summary = self.compile_model(_my_optimizer)
         return summary
 

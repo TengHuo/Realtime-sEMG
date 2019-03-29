@@ -9,9 +9,17 @@
 # 在main.py中训练模型并保存参数和图表
 # 在jupyter中展示和比较模型结果
 
+# TODO: 修改为按照命令行参数训练模型
+
 from utils import *
 from classification import CapgMLP, CapgCNN
 import os
+
+# load config setting
+try:
+    from config_default import configs
+except ImportError:
+    configs = {'test': False}
 
 # 检查数据是否存在
 root_path = os.path.join(os.sep, *os.path.dirname(os.path.realpath(__file__)).split(os.sep)[:-1])
@@ -45,11 +53,16 @@ for gesture_amount in range(8, 21):
     # save_history(history, mlp.files_path['history'])
     # print(history)
 
-    x_train = x_train[0:1280]
-    y_train = y_train[0:1280]
-    x_test = x_test[0:1280]
-    y_test = y_test[0:1280]
-    cnn = CapgCNN('CNN', epoch=60, output_size=gesture_amount)
+    # For TEST
+    if configs['test']:
+        x_train = x_train[0:1280]
+        y_train = y_train[0:1280]
+        x_test = x_test[0:1280]
+        y_test = y_test[0:1280]
+        cnn = CapgCNN('CNN', epoch=1, output_size=gesture_amount)
+    else:
+        cnn = CapgCNN('CNN', epoch=60, output_size=gesture_amount)
+
     model_summary = cnn.build_model()
     print(model_summary)
 
@@ -57,16 +70,8 @@ for gesture_amount in range(8, 21):
     history['score'] = cnn.evaluate_model(x_test, y_test)
     save_history(history, cnn.files_path['history'])
     print(history)
+    # TODO:每次训练完清空内存
 
     # for test
-    # break
-
-
-
-
-
-# # TODO:
-# # 依次训练CNN，LSTM，ConvLSTM（待修改为论文的模型）的8 gesture classification模型
-# # 修改output层，训练9-20的classification
-# # 测试模型
-
+    # if configs['test']:
+    #     break
