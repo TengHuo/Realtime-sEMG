@@ -10,14 +10,18 @@
 # 在jupyter中展示和比较模型结果
 
 # TODO: 修改为按照命令行参数训练模型
+# 使用命令行神器 Click
+# 参考： http://funhacks.net/2016/12/20/click/
+# https://isudox.com/2016/09/03/learning-python-package-click/
+# https://github.com/TengHuo/srep/blob/master/sigr/app.py
 
-from utils import *
-from classification import CapgMLP, CapgCNN
+from emg.utils import *
+from emg.classification import CapgMLP, CapgCNN
 import os
 
 # load config setting
 try:
-    from config_default import configs
+    from emg.config_default import configs
 except ImportError:
     configs = {'test': False}
 
@@ -73,5 +77,5 @@ for gesture_amount in range(8, 21):
     # TODO:每次训练完清空内存
 
     # for test
-    # if configs['test']:
-    #     break
+    if configs['test']:
+        break

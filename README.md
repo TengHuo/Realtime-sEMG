@@ -70,10 +70,10 @@ Measurements of the electrical activity in human muscles (electromyography, aka 
 
 ```bash
 # CPU training
-$ docker run -it -v $(pwd)/code:/emg/code -v $(pwd)/data:/emg/data -p 7777:8888 teng/emg:cpu
+$ docker run -it -v $(pwd):/code -p 7777:8888 teng/emg:cpu
 
 # GPU training
-$ nvidia-docker run -it -v $(pwd)/code:/emg/code -v $(pwd)/data:/emg/data -p 7777:8888 teng/emg:gpu
+$ nvidia-docker run -it -v $(pwd):/code -p 7777:8888 teng/emg:gpu
 ```
 
 ### Building from Source

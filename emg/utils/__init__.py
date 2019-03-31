@@ -5,6 +5,7 @@ from .data import prepare_data
 from .data import load_capg_from_h5
 from .data import save_capg_to_h5
 from .data import save_history, load_history
+from .capg_data import CapgDataset
 
 
 __all__ = [

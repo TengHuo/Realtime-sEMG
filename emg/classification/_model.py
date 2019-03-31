@@ -12,12 +12,13 @@
 
 import os
 import numpy as np
+
 from tensorflow.keras.layers import Dense
 from tensorflow.keras.callbacks import CSVLogger, LearningRateScheduler
 from tensorflow.keras.optimizers import SGD
-from tensorflow.keras import backend as K
 from tensorflow.compat.v1 import ConfigProto
 from tensorflow.compat.v1 import InteractiveSession
+import tensorflow.keras.backend as K
 
 
 class CapgModel(object):
