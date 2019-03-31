@@ -1,11 +1,13 @@
 # -*- coding: UTF-8 -*-
 
-
+# TODO: 按照MNIST的loader修改capg loader使其符合规范，data可能应该是tensor而不是numpy
+# TODO: 训练完成后保存模型，载入模型，记录训练log，记录accuracy
+# TODO: 整合代码到main中，修改为按命令行训练
 
 from emg.utils import CapgDataset
 
 from torch import nn
-from torch.optim import SGD
+from torch.optim import SGD, Adam
 from torch.utils.data import DataLoader
 import torch
 import torch.nn.functional as F
@@ -15,7 +17,6 @@ from torch.nn.utils import clip_grad_norm_
 from ignite.engine import Events, Engine, create_supervised_evaluator
 from ignite.utils import convert_tensor
 from ignite.contrib.handlers.param_scheduler import LRScheduler
-from ignite.contrib.handlers import param_scheduler
 from ignite.metrics import Accuracy, Loss
 
 from tqdm import tqdm
@@ -31,8 +32,7 @@ class CapgLSTM(nn.Module):
             num_layers=1,           # number of rnn layer
             batch_first=True,       # input & output will has batch size as 1s dimension. e.g. (batch, time_step, input_size)
         )
-
-        self.out = nn.Linear(64, 10)
+        self.out = nn.Linear(64, 8)
 
     def forward(self, x):
         r_out, _ = self.rnn(x, None)   # None represents zero initial hidden state
@@ -76,25 +76,7 @@ def _prepare_batch(batch, device=None, non_blocking=False):
 def lstm_trainer(model, optimizer, loss_fn,
                  device=None, non_blocking=False,
                  prepare_batch=_prepare_batch):
-    """
-    Factory function for creating a trainer for supervised models.
 
-    Args:
-        model (`torch.nn.Module`): the model to train.
-        optimizer (`torch.optim.Optimizer`): the optimizer to use.
-        loss_fn (torch.nn loss function): the loss function to use.
-        device (str, optional): device type specification (default: None).
-            Applies to both model and batches.
-        non_blocking (bool, optional): if True and this copy is between CPU and GPU, the copy may occur asynchronously
-            with respect to the host. For other cases, this argument has no effect.
-        prepare_batch (callable, optional): function that receives `batch`, `device`, `non_blocking` and outputs
-            tuple of tensors `(batch_x, batch_y)`.
-
-    Note: `engine.state.output` for this engine is the loss of the processed batch.
-
-    Returns:
-        Engine: a trainer engine with supervised update function.
-    """
     if device:
         model.to(device)
 
@@ -112,26 +94,25 @@ def lstm_trainer(model, optimizer, loss_fn,
     return Engine(_update)
 
 
-
 def run(train_batch_size, val_batch_size, epochs, lr, momentum, log_interval):
     train_loader, val_loader = get_data_loaders(train_batch_size, val_batch_size)
-    model = CapgMLP()
+    model = CapgLSTM()
+    # model = CapgMLP()
     device = 'cpu'
 
     if torch.cuda.is_available():
         device = 'cuda'
 
-    optimizer = SGD(model.parameters(), lr=lr, momentum=momentum)
-    trainer = lstm_trainer(model, optimizer, F.nll_loss, device=device)
+    optimizer = Adam(model.parameters(), lr=lr)
+    # optimizer = SGD(model.parameters(), lr=lr, momentum=momentum)
+    trainer = lstm_trainer(model, optimizer, F.cross_entropy, device=device)
 
     # step_scheduler = StepLR(optimizer, step_size=5, gamma=0.1)
     # scheduler = LRScheduler(step_scheduler)
     # trainer.add_event_handler(Events.ITERATION_STARTED, scheduler)
-
-
     evaluator = create_supervised_evaluator(model,
                                             metrics={'accuracy': Accuracy(),
-                                                     'nll': Loss(F.nll_loss)},
+                                                     'cs': Loss(F.cross_entropy)},
                                             device=device)
 
     desc = "ITERATION - loss: {:.2f}"
@@ -154,10 +135,10 @@ def run(train_batch_size, val_batch_size, epochs, lr, momentum, log_interval):
         evaluator.run(train_loader)
         metrics = evaluator.state.metrics
         avg_accuracy = metrics['accuracy']
-        avg_nll = metrics['nll']
+        avg_cs = metrics['cs']
         tqdm.write(
             "Training Results - Epoch: {}  Avg accuracy: {:.2f} Avg loss: {:.2f}"
-            .format(engine.state.epoch, avg_accuracy, avg_nll)
+            .format(engine.state.epoch, avg_accuracy, avg_cs)
         )
 
     @trainer.on(Events.EPOCH_COMPLETED)
@@ -165,10 +146,10 @@ def run(train_batch_size, val_batch_size, epochs, lr, momentum, log_interval):
         evaluator.run(val_loader)
         metrics = evaluator.state.metrics
         avg_accuracy = metrics['accuracy']
-        avg_nll = metrics['nll']
+        avg_cs = metrics['cs']
         tqdm.write(
             "Validation Results - Epoch: {}  Avg accuracy: {:.2f} Avg loss: {:.2f}"
-            .format(engine.state.epoch, avg_accuracy, avg_nll))
+            .format(engine.state.epoch, avg_accuracy, avg_cs))
 
         pbar.n = pbar.last_print_n = 0
 
@@ -183,6 +164,4 @@ if __name__ == "__main__":
     lr = 0.01
     momentum = 0.5
     log_interval = 10
-
     run(batch_size, val_batch_size, epochs, lr, momentum, log_interval)
-
