@@ -69,6 +69,8 @@ Measurements of the electrical activity in human muscles (electromyography, aka 
 **TODO: add usage commands, how to config**
 
 ```bash
+conda install --yes --file requirements.txt
+
 # CPU training
 $ docker run -it -v $(pwd):/code -p 7777:8888 teng/emg:cpu
 
