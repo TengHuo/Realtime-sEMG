@@ -62,8 +62,8 @@ class CapgDataset(data.Dataset):
 
         if sequence_result:
             y = y.reshape((y.shape[0], 1)) * np.ones((1, sequence_len))
-            y = y.flatten()
 
+        y = y.astype(int)
         self.data, self.targets = X, y
 
     def __getitem__(self, index):
@@ -74,7 +74,7 @@ class CapgDataset(data.Dataset):
         Returns:
             tuple: (X, target) where target is index of the target class.
         """
-        x, y = self.data[index], int(self.targets[index])
+        x, y = self.data[index], self.targets[index]
 
         if self.transform is not None:
             x = self.transform(x)

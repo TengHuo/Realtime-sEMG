@@ -42,20 +42,6 @@ class CapgLSTM(nn.Module):
         return predict
 
 
-class CapgMLP(nn.Module):
-    def __init__(self):
-        super(CapgMLP, self).__init__()
-        self.fc1 = nn.Linear(128, 256)
-        self.fc2 = nn.Linear(256, 256)
-        self.fc3 = nn.Linear(256, 8)
-
-    def forward(self, x):
-        x = F.relu(self.fc1(x))
-        x = F.relu(self.fc2(x))
-        x = self.fc3(x)
-        return F.log_softmax(x, dim=-1)
-
-
 def get_data_loaders(train_batch_size, val_batch_size):
     train_loader = DataLoader(CapgDataset(gestures=8, sequence_len=20, train=True),
                               batch_size=train_batch_size, shuffle=True)
@@ -72,6 +58,7 @@ def _prepare_batch(batch, device=None, non_blocking=False):
     x, y = batch
     return (convert_tensor(x, device=device, non_blocking=non_blocking),
             convert_tensor(y, device=device, non_blocking=non_blocking))
+
 
 def lstm_trainer(model, optimizer, loss_fn,
                  device=None, non_blocking=False,
