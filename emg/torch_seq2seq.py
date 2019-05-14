@@ -1,6 +1,7 @@
 # -*- coding: UTF-8 -*-
 
 
+import os
 import torch
 import torch.nn as nn
 from torch import optim
@@ -138,8 +139,27 @@ def run(train_batch_size, val_batch_size, input_size, hidden_size, gesture_num,
                                                 seq_length)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    encoder = EncoderRNN(input_size, hidden_size)
-    decoder = DecoderRNN(hidden_size, gesture_num)
+    model_name = 'seq2seq'
+    out_size = 8
+    root_path = os.path.join(os.sep, *os.path.dirname(os.path.realpath(__file__)).split(os.sep)[:-1])
+    model_folder = os.path.join(root_path, 'models', model_name, '{}'.format(out_size))
+    # create a folder for this model
+    if not os.path.isdir(model_folder):
+        os.makedirs(model_folder)
+
+    encoder_path = os.path.join(model_folder, 'encoder.pkl')
+    decoder_path = os.path.join(model_folder, 'decoder.pkl')
+    if os.path.exists(encoder_path):
+        print('model exist! load it!')
+        encoder = torch.load(encoder_path)
+    else:
+        encoder = EncoderRNN(input_size, hidden_size)
+
+    if os.path.exists(decoder_path):
+        print('model exist! load it!')
+        decoder = torch.load(decoder_path)
+    else:
+        decoder = DecoderRNN(hidden_size, gesture_num)
 
     encoder_optimizer = optim.Adam(encoder.parameters(), lr=lr)
     decoder_optimizer = optim.Adam(decoder.parameters(), lr=lr)
@@ -187,6 +207,12 @@ def run(train_batch_size, val_batch_size, input_size, hidden_size, gesture_num,
             .format(engine.state.epoch, avg_accuracy, avg_cs))
 
         pbar.n = pbar.last_print_n = 0
+
+    @trainer.on(Events.COMPLETED)
+    def save_model(engine):
+        print('train completed')
+        torch.save(encoder, encoder_path)
+        torch.save(decoder, decoder_path)
 
     trainer.run(train_loader, max_epochs=epochs)
     pbar.close()
