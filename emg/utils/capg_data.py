@@ -27,7 +27,7 @@ class CapgDataset(data.Dataset):
     supporting integer indexing in range from 0 to len(self) exclusive.
     """
 
-    def __init__(self, gestures=8, sequence_len=1, train=True, transform=None):
+    def __init__(self, gestures=8, sequence_len=1, sequence_result=False, train=True, transform=None):
         self.transform = transform
         self.train = train  # training set or test set
 
@@ -58,6 +58,10 @@ class CapgDataset(data.Dataset):
             seq_amount = int(1000/sequence_len)
             X = X.reshape(original_shape[0]*seq_amount, sequence_len, 128)
             y = y.reshape((y.shape[0], 1)) * np.ones((1, seq_amount))
+            y = y.flatten()
+
+        if sequence_result:
+            y = y.reshape((y.shape[0], 1)) * np.ones((1, sequence_len))
             y = y.flatten()
 
         self.data, self.targets = X, y
@@ -155,6 +159,7 @@ def _save_capg_to_h5(train, test, file_name):
         test_grp = data_file.create_group('test')
         for gesture in test.keys():
             test_grp.create_dataset(str(gesture), data=test[gesture], dtype=float)
+
 
 def _load_capg_data(db_name):
     # get the parent dir path
