@@ -14,7 +14,7 @@ import torch.nn.functional as F
 from torch.optim.lr_scheduler import StepLR
 from torch.nn.utils import clip_grad_norm_
 
-from ignite.engine import Events, Engine, create_supervised_evaluator
+from ignite.engine import Events, create_supervised_trainer, create_supervised_evaluator
 from ignite.utils import convert_tensor
 from ignite.contrib.handlers.param_scheduler import LRScheduler
 from ignite.metrics import Accuracy, Loss
@@ -51,48 +51,45 @@ def get_data_loaders(train_batch_size, val_batch_size):
     return train_loader, val_loader
 
 
-def _prepare_batch(batch, device=None, non_blocking=False):
-    """Prepare batch for training: pass to a device with options.
+# def _prepare_batch(batch, device=None, non_blocking=False):
+#     """Prepare batch for training: pass to a device with options.
+#
+#     """
+#     x, y = batch
+#     return (convert_tensor(x, device=device, non_blocking=non_blocking),
+#             convert_tensor(y, device=device, non_blocking=non_blocking))
 
-    """
-    x, y = batch
-    return (convert_tensor(x, device=device, non_blocking=non_blocking),
-            convert_tensor(y, device=device, non_blocking=non_blocking))
 
-
-def lstm_trainer(model, optimizer, loss_fn,
-                 device=None, non_blocking=False,
-                 prepare_batch=_prepare_batch):
-
-    if device:
-        model.to(device)
-
-    def _update(engine, batch):
-        model.train()
-        optimizer.zero_grad()
-        x, y = prepare_batch(batch, device=device, non_blocking=non_blocking)
-        y_pred = model(x)
-        loss = loss_fn(y_pred, y)
-        loss.backward()
-        clip_grad_norm_(model.parameters(), 0.5)
-        optimizer.step()
-        return loss.item()
-
-    return Engine(_update)
+# def lstm_trainer(model, optimizer, loss_fn,
+#                  device=None, non_blocking=False,
+#                  prepare_batch=_prepare_batch):
+#
+#     if device:
+#         model.to(device)
+#
+#     def _update(engine, batch):
+#         model.train()
+#         optimizer.zero_grad()
+#         x, y = prepare_batch(batch, device=device, non_blocking=non_blocking)
+#         y_pred = model(x)
+#         loss = loss_fn(y_pred, y)
+#         loss.backward()
+#         clip_grad_norm_(model.parameters(), 0.5)
+#         optimizer.step()
+#         return loss.item()
+#
+#     return Engine(_update)
 
 
 def run(train_batch_size, val_batch_size, epochs, lr, momentum, log_interval):
+
     train_loader, val_loader = get_data_loaders(train_batch_size, val_batch_size)
     model = CapgLSTM()
-    # model = CapgMLP()
-    device = 'cpu'
-
-    if torch.cuda.is_available():
-        device = 'cuda'
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     optimizer = Adam(model.parameters(), lr=lr)
     # optimizer = SGD(model.parameters(), lr=lr, momentum=momentum)
-    trainer = lstm_trainer(model, optimizer, F.cross_entropy, device=device)
+    trainer = create_supervised_trainer(model, optimizer, F.cross_entropy, device=device)
 
     # step_scheduler = StepLR(optimizer, step_size=5, gamma=0.1)
     # scheduler = LRScheduler(step_scheduler)

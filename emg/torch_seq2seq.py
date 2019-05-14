@@ -5,6 +5,13 @@ import torch
 import torch.nn as nn
 from torch import optim
 from torch.utils.data import DataLoader
+import torch.nn.functional as F
+
+from ignite.engine import Events, Engine
+from ignite.utils import convert_tensor
+from ignite.metrics import Accuracy, Loss
+
+from tqdm import tqdm
 
 from emg.utils import CapgDataset
 
@@ -43,64 +50,157 @@ class DecoderRNN(nn.Module):
 
 
 def get_data_loaders(gesture_num, train_batch_size, val_batch_size, sequence_len):
-    train_loader = DataLoader(CapgDataset(gestures=gesture_num, sequence_len=sequence_len, sequence_result=True,
-                                          train=True), batch_size=train_batch_size, shuffle=True)
+    train_loader = DataLoader(CapgDataset(gestures=gesture_num,
+                                          sequence_len=sequence_len,
+                                          sequence_result=True,
+                                          train=True),
+                              batch_size=train_batch_size, shuffle=True)
 
-    val_loader = DataLoader(CapgDataset(gestures=gesture_num, sequence_len=sequence_len, sequence_result=True,
-                                        train=False), batch_size=val_batch_size, shuffle=False)
+    val_loader = DataLoader(CapgDataset(gestures=gesture_num,
+                                        sequence_len=sequence_len,
+                                        sequence_result=True,
+                                        train=False),
+                            batch_size=val_batch_size, shuffle=False)
 
     return train_loader, val_loader
 
 
-if __name__ == "__main__":
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    print(device)
+def _prepare_batch(batch, device=None, non_blocking=False):
+    """Prepare batch for training: pass to a device with options.
 
+    """
+    x, y = batch
+    return (convert_tensor(x, device=device, non_blocking=non_blocking),
+            convert_tensor(y, device=device, non_blocking=non_blocking))
+
+
+def create_trainer(encoder, decoder, encoder_optimizer, decoder_optimizer, loss_fn,
+                   device=None, prepare_batch=_prepare_batch):
+
+    if device:
+        encoder.to(device)
+        decoder.to(device)
+
+    def _update(engine, batch):
+        encoder_optimizer.zero_grad()
+        decoder_optimizer.zero_grad()
+
+        x, y = prepare_batch(batch, device=device)
+
+        encoder_output, hidden = encoder(x)
+        decoder_input = torch.zeros((x.size(0), 1, hidden.size(2)), device=device)
+        loss = 0.0
+        for i in range(encoder_output.size(1)):
+            decoder_input, pred, hidden = decoder(decoder_input, hidden)
+            loss += loss_fn(pred, y[:, i])
+
+        loss.backward()
+        encoder_optimizer.step()
+        decoder_optimizer.step()
+        return loss.item()
+
+    return Engine(_update)
+
+
+def create_evaluator(encoder, decoder, metrics,
+                     device=None, prepare_batch=_prepare_batch):
+
+    if device:
+        encoder.to(device)
+        decoder.to(device)
+
+    def _inference(engine, batch):
+        encoder.eval()
+        decoder.eval()
+
+        with torch.no_grad():
+            x, y = prepare_batch(batch, device=device)
+            encoder_output, hidden = encoder(x)
+            decoder_input = torch.zeros((x.size(0), 1, hidden.size(2)), device=device)
+            for i in range(encoder_output.size(1)):
+                decoder_input, pred, hidden = decoder(decoder_input, hidden)
+            return pred, y[:, 0]
+
+    engine = Engine(_inference)
+
+    for name, metric in metrics.items():
+        metric.attach(engine, name)
+
+    return engine
+
+
+def run(train_batch_size, val_batch_size, input_size, hidden_size, gesture_num,
+        seq_length, epochs, lr, log_interval):
+
+    train_loader, val_loader = get_data_loaders(gesture_num,
+                                                train_batch_size,
+                                                val_batch_size,
+                                                seq_length)
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+    encoder = EncoderRNN(input_size, hidden_size)
+    decoder = DecoderRNN(hidden_size, gesture_num)
+
+    encoder_optimizer = optim.Adam(encoder.parameters(), lr=lr)
+    decoder_optimizer = optim.Adam(decoder.parameters(), lr=lr)
+
+    trainer = create_trainer(encoder, decoder, encoder_optimizer, decoder_optimizer,
+                             F.cross_entropy, device=device)
+    evaluator = create_evaluator(encoder, decoder, device=device,
+                                 metrics={'accuracy': Accuracy(),
+                                          'cs': Loss(F.cross_entropy)})
+
+    desc = "ITERATION - loss: {:.2f}"
+    pbar = tqdm(
+        initial=0, leave=False, total=len(train_loader),
+        desc=desc.format(0)
+    )
+
+    @trainer.on(Events.ITERATION_COMPLETED)
+    def log_training_loss(engine):
+        iter = (engine.state.iteration - 1) % len(train_loader) + 1
+
+        if iter % log_interval == 0:
+            pbar.desc = desc.format(engine.state.output)
+            pbar.update(log_interval)
+
+    @trainer.on(Events.EPOCH_COMPLETED)
+    def log_training_results(engine):
+        pbar.refresh()
+        evaluator.run(train_loader)
+        metrics = evaluator.state.metrics
+        avg_accuracy = metrics['accuracy']
+        avg_cs = metrics['cs']
+        tqdm.write(
+            "Training Results - Epoch: {}  Avg accuracy: {:.2f} Avg loss: {:.2f}"
+            .format(engine.state.epoch, avg_accuracy, avg_cs)
+        )
+
+    @trainer.on(Events.EPOCH_COMPLETED)
+    def log_validation_results(engine):
+        evaluator.run(val_loader)
+        metrics = evaluator.state.metrics
+        avg_accuracy = metrics['accuracy']
+        avg_cs = metrics['cs']
+        tqdm.write(
+            "Validation Results - Epoch: {}  Avg accuracy: {:.2f} Avg loss: {:.2f}"
+            .format(engine.state.epoch, avg_accuracy, avg_cs))
+
+        pbar.n = pbar.last_print_n = 0
+
+    trainer.run(train_loader, max_epochs=epochs)
+    pbar.close()
+
+
+if __name__ == "__main__":
     gesture_num = 8
     epoch = 10
     learning_rate = 0.01
     seq_length = 10
     input_size = 128
     hidden_size = 256
-    train_batch_size = 64
-    val_batch_size = 1000
+    train_batch_size = 256
+    val_batch_size = 1024
 
-    encoder = EncoderRNN(input_size, hidden_size).to(device)
-    decoder = DecoderRNN(hidden_size, gesture_num).to(device)
-
-    encoder_optimizer = optim.SGD(encoder.parameters(), lr=learning_rate)
-    decoder_optimizer = optim.SGD(decoder.parameters(), lr=learning_rate)
-
-    criterion = nn.CrossEntropyLoss()
-
-    train_loader, _ = get_data_loaders(gesture_num, train_batch_size, val_batch_size, seq_length)
-
-    for e in range(epoch):  # loop over the dataset multiple times
-
-        avg_loss = 0.0
-        for i, data in enumerate(train_loader, 0):
-            # get the inputs
-            x, labels = data
-
-            encoder_optimizer.zero_grad()
-            decoder_optimizer.zero_grad()
-
-            _, hidden = encoder(x)
-            decoder_input = torch.zeros((train_batch_size, 1, hidden_size), device=device)
-            loss = 0.0
-            for i in range(seq_length):
-                decoder_input, pred, hidden = decoder(decoder_input, hidden)
-                loss += criterion(pred, labels[:, i])
-            # print(loss)
-
-            loss.backward()
-            encoder_optimizer.step()
-            decoder_optimizer.step()
-
-            avg_loss += loss.item()
-            if i % 100 == 99:
-                print('[Epoch %d, Batch %5d] loss: %.3f' %
-                      (epoch, i + 1, avg_loss / 100))
-                avg_loss = 0.0
-print("Done Training!")
-
+    run(train_batch_size, val_batch_size, input_size, hidden_size, gesture_num,
+        seq_length, epoch, learning_rate, log_interval=10)
