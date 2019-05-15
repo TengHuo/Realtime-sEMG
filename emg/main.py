@@ -42,7 +42,7 @@ print('data load complete, start train model')
 # 固定前几层weights，替换最后一层output为9-20个输出再分别训练
 # 测试模型，保存测试结果
 
-for gesture_amount in range(8, 21):
+for gesture_amount in range(20, 21):
     x_train, y_train = prepare_data(train, required_gestures=gesture_amount,
                                     mode=LoadMode.flat_frame)
     x_test, y_test = prepare_data(test, required_gestures=gesture_amount,
