@@ -1,7 +1,15 @@
 # -*- coding: UTF-8 -*-
-
+# torch_seq2seq.py
+# @Time     : 15/May/2019
+# @Auther   : TENG HUO
+# @Email    : teng_huo@outlook.com
+# @Version  : 1.0.0
+# @License  : MIT
+#
+#
 
 import os
+import h5py
 import torch
 import torch.nn as nn
 from torch import optim
@@ -83,6 +91,9 @@ def create_trainer(encoder, decoder, encoder_optimizer, decoder_optimizer, loss_
         decoder.to(device)
 
     def _update(engine, batch):
+        encoder.train()
+        decoder.train()
+
         encoder_optimizer.zero_grad()
         decoder_optimizer.zero_grad()
 
@@ -139,6 +150,7 @@ def run(train_batch_size, val_batch_size, input_size, hidden_size, gesture_num,
                                                 seq_length)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
+    # create a folder for storing the model
     model_name = 'seq2seq'
     out_size = 8
     root_path = os.path.join(os.sep, *os.path.dirname(os.path.realpath(__file__)).split(os.sep)[:-1])
@@ -149,6 +161,7 @@ def run(train_batch_size, val_batch_size, input_size, hidden_size, gesture_num,
 
     encoder_path = os.path.join(model_folder, 'encoder.pkl')
     decoder_path = os.path.join(model_folder, 'decoder.pkl')
+    # check model files
     if os.path.exists(encoder_path):
         print('model exist! load it!')
         encoder = torch.load(encoder_path)
@@ -176,10 +189,12 @@ def run(train_batch_size, val_batch_size, input_size, hidden_size, gesture_num,
         desc=desc.format(0)
     )
 
+    loss_history = []
+
     @trainer.on(Events.ITERATION_COMPLETED)
     def log_training_loss(engine):
         iter = (engine.state.iteration - 1) % len(train_loader) + 1
-
+        loss_history.append(engine.state.output)
         if iter % log_interval == 0:
             pbar.desc = desc.format(engine.state.output)
             pbar.update(log_interval)
@@ -211,6 +226,9 @@ def run(train_batch_size, val_batch_size, input_size, hidden_size, gesture_num,
     @trainer.on(Events.COMPLETED)
     def save_model(engine):
         print('train completed')
+        f = h5py.File('./history.h5', 'w')
+        f.create_dataset('loss_history', data=loss_history)
+        f.close()
         torch.save(encoder, encoder_path)
         torch.save(decoder, decoder_path)
 
@@ -220,7 +238,7 @@ def run(train_batch_size, val_batch_size, input_size, hidden_size, gesture_num,
 
 if __name__ == "__main__":
     gesture_num = 8
-    epoch = 10
+    epoch = 100
     learning_rate = 0.01
     seq_length = 10
     input_size = 128

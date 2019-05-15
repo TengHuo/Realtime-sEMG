@@ -1,8 +1,12 @@
 # -*- coding: UTF-8 -*-
-
-# TODO: 按照MNIST的loader修改capg loader使其符合规范，data可能应该是tensor而不是numpy
-# TODO: 训练完成后保存模型，载入模型，记录训练log，记录accuracy
-# TODO: 整合代码到main中，修改为按命令行训练
+# torch_lstm.py
+# @Time     : 15/May/2019
+# @Auther   : TENG HUO
+# @Email    : teng_huo@outlook.com
+# @Version  : 1.0.0
+# @License  : MIT
+#
+#
 
 from emg.utils import CapgDataset
 
@@ -49,36 +53,6 @@ def get_data_loaders(train_batch_size, val_batch_size):
     val_loader = DataLoader(CapgDataset(gestures=8, sequence_len=20, train=False),
                             batch_size=val_batch_size, shuffle=False)
     return train_loader, val_loader
-
-
-# def _prepare_batch(batch, device=None, non_blocking=False):
-#     """Prepare batch for training: pass to a device with options.
-#
-#     """
-#     x, y = batch
-#     return (convert_tensor(x, device=device, non_blocking=non_blocking),
-#             convert_tensor(y, device=device, non_blocking=non_blocking))
-
-
-# def lstm_trainer(model, optimizer, loss_fn,
-#                  device=None, non_blocking=False,
-#                  prepare_batch=_prepare_batch):
-#
-#     if device:
-#         model.to(device)
-#
-#     def _update(engine, batch):
-#         model.train()
-#         optimizer.zero_grad()
-#         x, y = prepare_batch(batch, device=device, non_blocking=non_blocking)
-#         y_pred = model(x)
-#         loss = loss_fn(y_pred, y)
-#         loss.backward()
-#         clip_grad_norm_(model.parameters(), 0.5)
-#         optimizer.step()
-#         return loss.item()
-#
-#     return Engine(_update)
 
 
 def run(train_batch_size, val_batch_size, epochs, lr, momentum, log_interval):
