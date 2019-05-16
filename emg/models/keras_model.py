@@ -21,7 +21,7 @@ from tensorflow.compat.v1 import InteractiveSession
 import tensorflow.keras.backend as K
 
 
-class CapgModel(object):
+class Keras_Model(object):
     """basic model class for capg classifications
     """
     def __init__(self, model_name, batch_size, epoch, output_size):

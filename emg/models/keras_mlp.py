@@ -9,7 +9,7 @@
 # Multilayer perceptron model for gesture classification
 
 
-from ._model import CapgModel
+from .keras_model import Keras_Model
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Dense, Dropout, BatchNormalization, Activation
 from tensorflow.keras.optimizers import Adam
@@ -40,9 +40,9 @@ def _model_configure():
 _my_optimizer = None
 
 
-class CapgMLP(CapgModel):
+class MLP(Keras_Model):
     def __init__(self, model_name='MLP', batch_size=128, epoch=60, output_size=8):
-        CapgModel.__init__(self, model_name, batch_size, epoch, output_size)
+        Keras_Model.__init__(self, model_name, batch_size, epoch, output_size)
 
     def build_model(self):
         self.load_model(_model_configure)

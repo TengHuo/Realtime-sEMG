@@ -9,14 +9,14 @@
 # 在main.py中训练模型并保存参数和图表
 # 在jupyter中展示和比较模型结果
 
-# TODO: 修改为按照命令行参数训练模型
+# TODO: 将代码整合到app中
 # 使用命令行神器 Click
 # 参考： http://funhacks.net/2016/12/20/click/
 # https://isudox.com/2016/09/03/learning-python-package-click/
 # https://github.com/TengHuo/srep/blob/master/sigr/app.py
 
 from emg.utils import *
-from emg.classification import CapgMLP, CapgCNN
+from emg.models import MLP, CNN
 import os
 
 # load config setting
@@ -63,9 +63,9 @@ for gesture_amount in range(20, 21):
         y_train = y_train[0:1280]
         x_test = x_test[0:1280]
         y_test = y_test[0:1280]
-        cnn = CapgCNN('CNN', epoch=1, output_size=gesture_amount)
+        cnn = CNN('CNN', epoch=1, output_size=gesture_amount)
     else:
-        cnn = CapgCNN('CNN', epoch=60, output_size=gesture_amount)
+        cnn = CNN('CNN', epoch=60, output_size=gesture_amount)
 
     model_summary = cnn.build_model()
     print(model_summary)
