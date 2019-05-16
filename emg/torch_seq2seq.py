@@ -6,28 +6,28 @@
 # @Version  : 1.0.0
 # @License  : MIT
 #
-#
+# TODO: 3. 模型优化：1. 增加dropout，2. 尝试bn，3. 增加模型复杂度
 
 import os
 import h5py
 import torch
 import torch.nn as nn
-from torch import optim
 from torch.utils.data import DataLoader
 import torch.nn.functional as F
 
-from ignite.engine import Events, Engine
-from ignite.utils import convert_tensor
-from ignite.metrics import Accuracy, Loss
-
-from tqdm import tqdm
+from ignite.engine import Events, create_supervised_trainer, create_supervised_evaluator
+from ignite.handlers import EarlyStopping
+from ignite.metrics import Accuracy, Loss, RunningAverage
+from ignite.contrib.handlers.param_scheduler import LRScheduler
+from ignite.contrib.handlers.tqdm_logger import ProgressBar
+from torch.optim.lr_scheduler import StepLR
 
 from emg.utils import CapgDataset
 
 
-class EncoderRNN(nn.Module):
+class Encoder(nn.Module):
     def __init__(self, input_size, hidden_size):
-        super(EncoderRNN, self).__init__()
+        super(Encoder, self).__init__()
 
         self.rnn = nn.GRU(
             input_size=input_size,
@@ -37,117 +37,58 @@ class EncoderRNN(nn.Module):
         )
 
     def forward(self, x):
-        output, hidden = self.rnn(x, None)
-        return output, hidden
+        _, hidden = self.rnn(x, None)
+        return hidden
 
 
-class DecoderRNN(nn.Module):
+class Decoder(nn.Module):
     def __init__(self, hidden_size, output_size):
-        super(DecoderRNN, self).__init__()
+        super(Decoder, self).__init__()
 
-        self.rnn = nn.GRU(
-            input_size=hidden_size,
-            hidden_size=hidden_size,
-            num_layers=1,
-            batch_first=True,
-        )
-        self.fc = nn.Linear(hidden_size, output_size)
+        self.fc = nn.Linear(hidden_size, hidden_size)
+        self.output = nn.Linear(hidden_size, output_size)
 
-    def forward(self, x, prev_hidden):
-        output, hidden = self.rnn(x, prev_hidden)
-        return output, self.fc(output[:, 0, :]), hidden
+    def forward(self, x):
+        x = F.relu(self.fc(x))
+        return self.output(x)
+
+
+class Transformer(nn.Module):
+    def __init__(self, input_length, hidden_size, output_size):
+        super(Transformer, self).__init__()
+
+        self.encoder = Encoder(input_length, hidden_size)
+        self.decoder = Decoder(hidden_size, output_size)
+
+    def forward(self, x):
+        hidden = self.encoder(x)
+        return self.decoder(hidden[0])
 
 
 def get_data_loaders(gesture_num, train_batch_size, val_batch_size, sequence_len):
     train_loader = DataLoader(CapgDataset(gestures=gesture_num,
                                           sequence_len=sequence_len,
-                                          sequence_result=True,
+                                          sequence_result=False,
                                           train=True),
                               batch_size=train_batch_size, shuffle=True)
 
     val_loader = DataLoader(CapgDataset(gestures=gesture_num,
                                         sequence_len=sequence_len,
-                                        sequence_result=True,
+                                        sequence_result=False,
                                         train=False),
                             batch_size=val_batch_size, shuffle=False)
 
     return train_loader, val_loader
 
 
-def _prepare_batch(batch, device=None, non_blocking=False):
-    """Prepare batch for training: pass to a device with options.
-
-    """
-    x, y = batch
-    return (convert_tensor(x, device=device, non_blocking=non_blocking),
-            convert_tensor(y, device=device, non_blocking=non_blocking))
-
-
-def create_trainer(encoder, decoder, encoder_optimizer, decoder_optimizer, loss_fn,
-                   device=None, prepare_batch=_prepare_batch):
-
-    if device:
-        encoder.to(device)
-        decoder.to(device)
-
-    def _update(engine, batch):
-        encoder.train()
-        decoder.train()
-
-        encoder_optimizer.zero_grad()
-        decoder_optimizer.zero_grad()
-
-        x, y = prepare_batch(batch, device=device)
-
-        encoder_output, hidden = encoder(x)
-        decoder_input = torch.zeros((x.size(0), 1, hidden.size(2)), device=device)
-        loss = 0.0
-        for i in range(encoder_output.size(1)):
-            decoder_input, pred, hidden = decoder(decoder_input, hidden)
-            loss += loss_fn(pred, y[:, i])
-
-        loss.backward()
-        encoder_optimizer.step()
-        decoder_optimizer.step()
-        return loss.item()
-
-    return Engine(_update)
-
-
-def create_evaluator(encoder, decoder, metrics,
-                     device=None, prepare_batch=_prepare_batch):
-
-    if device:
-        encoder.to(device)
-        decoder.to(device)
-
-    def _inference(engine, batch):
-        encoder.eval()
-        decoder.eval()
-
-        with torch.no_grad():
-            x, y = prepare_batch(batch, device=device)
-            encoder_output, hidden = encoder(x)
-            decoder_input = torch.zeros((x.size(0), 1, hidden.size(2)), device=device)
-            for i in range(encoder_output.size(1)):
-                decoder_input, pred, hidden = decoder(decoder_input, hidden)
-            return pred, y[:, 0]
-
-    engine = Engine(_inference)
-
-    for name, metric in metrics.items():
-        metric.attach(engine, name)
-
-    return engine
-
-
 def run(train_batch_size, val_batch_size, input_size, hidden_size, gesture_num,
-        seq_length, epochs, lr, log_interval):
+        seq_length, epochs, lr):
 
     train_loader, val_loader = get_data_loaders(gesture_num,
                                                 train_batch_size,
                                                 val_batch_size,
                                                 seq_length)
+
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     # create a folder for storing the model
@@ -159,92 +100,79 @@ def run(train_batch_size, val_batch_size, input_size, hidden_size, gesture_num,
     if not os.path.isdir(model_folder):
         os.makedirs(model_folder)
 
-    encoder_path = os.path.join(model_folder, 'encoder.pkl')
-    decoder_path = os.path.join(model_folder, 'decoder.pkl')
+    model_path = os.path.join(model_folder, 'transformer.pkl')
     # check model files
-    if os.path.exists(encoder_path):
+    if False:#os.path.exists(model_path):
         print('model exist! load it!')
-        encoder = torch.load(encoder_path)
+        model = torch.load(model_path)
     else:
-        encoder = EncoderRNN(input_size, hidden_size)
+        model = Transformer(input_size, hidden_size, gesture_num)
 
-    if os.path.exists(decoder_path):
-        print('model exist! load it!')
-        decoder = torch.load(decoder_path)
-    else:
-        decoder = DecoderRNN(hidden_size, gesture_num)
+    optimizer = torch.optim.Adam(model.parameters(), lr=lr)
+    trainer = create_supervised_trainer(model, optimizer, F.cross_entropy, device=device)
+    evaluator = create_supervised_evaluator(model,
+                                            metrics={'accuracy': Accuracy(),
+                                                     'loss': Loss(F.cross_entropy)},
+                                            device=device)
 
-    encoder_optimizer = optim.Adam(encoder.parameters(), lr=lr)
-    decoder_optimizer = optim.Adam(decoder.parameters(), lr=lr)
-
-    trainer = create_trainer(encoder, decoder, encoder_optimizer, decoder_optimizer,
-                             F.cross_entropy, device=device)
-    evaluator = create_evaluator(encoder, decoder, device=device,
-                                 metrics={'accuracy': Accuracy(),
-                                          'cs': Loss(F.cross_entropy)})
-
-    desc = "ITERATION - loss: {:.2f}"
-    pbar = tqdm(
-        initial=0, leave=False, total=len(train_loader),
-        desc=desc.format(0)
-    )
+    RunningAverage(output_transform=lambda x: x).attach(trainer, 'loss')
+    pbar = ProgressBar()
+    pbar.attach(trainer, ['loss'])
 
     loss_history = []
-
     @trainer.on(Events.ITERATION_COMPLETED)
-    def log_training_loss(engine):
-        iter = (engine.state.iteration - 1) % len(train_loader) + 1
-        loss_history.append(engine.state.output)
-        if iter % log_interval == 0:
-            pbar.desc = desc.format(engine.state.output)
-            pbar.update(log_interval)
+    def log_training_loss(trainer):
+        loss_history.append(trainer.state.output)
 
     @trainer.on(Events.EPOCH_COMPLETED)
-    def log_training_results(engine):
-        pbar.refresh()
+    def log_training_results(trainer):
+        print('evaluating the model.....')
         evaluator.run(train_loader)
         metrics = evaluator.state.metrics
-        avg_accuracy = metrics['accuracy']
-        avg_cs = metrics['cs']
-        tqdm.write(
-            "Training Results - Epoch: {}  Avg accuracy: {:.2f} Avg loss: {:.2f}"
-            .format(engine.state.epoch, avg_accuracy, avg_cs)
-        )
+        print("Training Results - Avg accuracy: {:.2f} Avg loss: {:.2f}"
+              .format(metrics['accuracy'], metrics['loss']))
 
     @trainer.on(Events.EPOCH_COMPLETED)
-    def log_validation_results(engine):
+    def log_validation_results(trainer):
         evaluator.run(val_loader)
         metrics = evaluator.state.metrics
-        avg_accuracy = metrics['accuracy']
-        avg_cs = metrics['cs']
-        tqdm.write(
-            "Validation Results - Epoch: {}  Avg accuracy: {:.2f} Avg loss: {:.2f}"
-            .format(engine.state.epoch, avg_accuracy, avg_cs))
-
-        pbar.n = pbar.last_print_n = 0
+        print("Validation Results - Avg accuracy: {:.2f} Avg loss: {:.2f}"
+              .format(metrics['accuracy'], metrics['loss']))
 
     @trainer.on(Events.COMPLETED)
-    def save_model(engine):
+    def save_model(trainer):
         print('train completed')
-        f = h5py.File('./history.h5', 'w')
+        f = h5py.File('../models/history.h5', 'w')
         f.create_dataset('loss_history', data=loss_history)
         f.close()
-        torch.save(encoder, encoder_path)
-        torch.save(decoder, decoder_path)
+        torch.save(model, model_path)
+
+    step_scheduler = StepLR(optimizer, step_size=20, gamma=0.1)
+    scheduler = LRScheduler(step_scheduler, save_history=True)
+    trainer.add_event_handler(Events.EPOCH_COMPLETED, scheduler)
+
+    def score_function(engine):
+        val_loss = engine.state.metrics['loss']
+        # print('loss: {}'.format(val_loss))
+        return -val_loss
+
+    handler = EarlyStopping(patience=2, score_function=score_function, trainer=trainer)
+    # Note: the handler is attached to an *Evaluator* (runs one epoch on validation dataset).
+    evaluator.add_event_handler(Events.COMPLETED, handler)
 
     trainer.run(train_loader, max_epochs=epochs)
     pbar.close()
 
 
 if __name__ == "__main__":
-    gesture_num = 8
-    epoch = 100
+    epoch = 5
     learning_rate = 0.01
     seq_length = 10
     input_size = 128
     hidden_size = 256
+    gesture_num = 8
     train_batch_size = 256
     val_batch_size = 1024
 
     run(train_batch_size, val_batch_size, input_size, hidden_size, gesture_num,
-        seq_length, epoch, learning_rate, log_interval=10)
+        seq_length, epoch, learning_rate)
