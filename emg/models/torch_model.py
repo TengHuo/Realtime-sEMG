@@ -24,7 +24,7 @@ from torch.optim.lr_scheduler import StepLR
 def prepare_folder(model_name, gesture_num):
     # create a folder for storing the model
     root_path = os.path.join(os.sep, *os.path.dirname(os.path.realpath(__file__)).split(os.sep)[:-2])
-    model_folder = os.path.join(root_path, 'models', model_name, '{}'.format(gesture_num))
+    model_folder = os.path.join(root_path, 'outputs', model_name, '{}'.format(gesture_num))
     model_path = os.path.join(model_folder, 'model.pkl')
     # create a folder for this model
     if not os.path.isdir(model_folder):
