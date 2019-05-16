@@ -7,7 +7,6 @@ from .data import save_capg_to_h5
 from .data import save_history, load_history
 from .capg_data import CapgDataset
 
-
 __all__ = [
     'LoadMode',
     'load_capg_all',
@@ -15,4 +14,5 @@ __all__ = [
     'prepare_data',
     'load_capg_from_h5',
     'save_capg_to_h5',
-    'save_history']
+    'save_history',
+    'CapgDataset']

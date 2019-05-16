@@ -3,7 +3,7 @@
 .env
 data/
 cache/
-models/
+outputs/
 config_default.py
 
 # Created by https://www.gitignore.io/api/macos,python,pycharm,jupyternotebook,visualstudiocode
