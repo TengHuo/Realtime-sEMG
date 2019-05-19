@@ -1,7 +1,6 @@
 #! /bin/bash
 
 # Train models for classifying 8-20 gestures in CapgMyo dataset
-source activate py36
 for((i=8; i <= 20; i++));
 do
     python -m emg.app --model seq2seq \
