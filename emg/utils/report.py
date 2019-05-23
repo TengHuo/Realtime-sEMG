@@ -16,7 +16,6 @@ def _read_template() -> str:
     try:
         template_path = os.path.join(os.sep, *os.path.dirname(os.path.realpath(__file__)).split(os.sep))
         template_path = os.path.join(template_path, 'template.md')
-        print(template_path)
         with open(template_path, 'r') as f:
             template = f.read()
         return template
@@ -30,8 +29,8 @@ def _generate(content: dict, template: str) -> str:
     template = template.replace('{{date}}', time.strftime('%Y-%m-%d %H:%M:%S', time.localtime()))
     template = template.replace('{{hyperparameters}}', str(content['hyperparameter']))
     template = template.replace('{{summary}}', content['model_summary'])
-    template = template.replace('{{log}}', content['log'])
-    template = template.replace('{{image}}', content['history_img_path'])
+    template = template.replace('{{log}}', '\n'.join(content['log']))
+    template = template.replace('{{image}}', './history.png')
     generated_report = template.replace('{{evaluation}}', content['evaluation'])
     return generated_report
 
@@ -53,7 +52,7 @@ if __name__ == '__main__':
         'hyperparameter': {'test': 1, 'test2': 2},
         'model_summary': 'test',
         'log': "Training Results - Avg accuracy: 0.10 Avg loss: 0.10\n",
-        'history_img_path': './image.png',
+        'history_img_path': './history.png',
         'evaluation': 'evaluation result'
     }
 

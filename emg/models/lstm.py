@@ -55,6 +55,14 @@ def get_data_loaders(gesture_num, train_batch_size, val_batch_size, sequence_len
     return train_loader, val_loader
 
 
+def _calculate_accuracy(_, y, y_pred: torch.Tensor, loss):
+    y_pred = F.log_softmax(y_pred, dim=1)
+    _, y_pred = torch.max(y_pred, dim=1)
+    correct = (y_pred == y).sum().item()
+    accuracy = correct / y.size(0)
+    return loss.item(), accuracy
+
+
 def run(option, input_size=128, hidden_size=256, seq_length=10):
     train_loader, val_loader = get_data_loaders(option['gesture_num'],
                                                 option['train_batch_size'],
@@ -71,7 +79,8 @@ def run(option, input_size=128, hidden_size=256, seq_length=10):
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     optimizer = torch.optim.Adam(model.parameters(), lr=option['lr'])
-    trainer = create_supervised_trainer(model, optimizer, F.cross_entropy, device=device)
+    trainer = create_supervised_trainer(model, optimizer, F.cross_entropy, device=device,
+                                        output_transform=_calculate_accuracy)
     evaluator = create_supervised_evaluator(model,
                                             metrics={'accuracy': Accuracy(),
                                                      'loss': Loss(F.cross_entropy)},
@@ -85,7 +94,7 @@ if __name__ == "__main__":
         'model': 'lstm',
         'gesture_num': 8,
         'lr': 0.01,
-        'epoch': 2,
+        'epoch': 10,
         'train_batch_size': 256,
         'val_batch_size': 1024,
         'stop_patience': 5
