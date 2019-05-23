@@ -10,7 +10,9 @@
 
 ## Model Summary
 
+```
 {{summary}}
+```
 
 ## Log
 

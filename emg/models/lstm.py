@@ -18,27 +18,27 @@ from ignite.engine import create_supervised_trainer, create_supervised_evaluator
 from ignite.metrics import Accuracy, Loss
 
 from emg.utils import CapgDataset
-from .torch_model import add_handles, prepare_folder
+from emg.models.torch_model import prepare_folder
+from emg.models.torch_model import add_handles
 
 
 class CapgLSTM(nn.Module):
     def __init__(self, input_size, hidden_size, output_size):
         super(CapgLSTM, self).__init__()
 
-        self.rnn = nn.LSTM(
+        self.rnn = nn.GRU(
             input_size=input_size,
             hidden_size=hidden_size,
             num_layers=1,
             batch_first=True,
         )
-        self.out = nn.Linear(hidden_size, output_size)
+        self.fc = nn.Linear(hidden_size, output_size)
 
     def forward(self, x):
-        r_out, _ = self.rnn(x, None)   # None represents zero initial hidden state
-
+        x, _ = self.rnn(x, None)   # None represents zero initial hidden state
         # choose r_out at the last time step
-        predict = self.out(r_out[:, -1, :])
-        return predict
+        x = self.fc(x[:, -1, :])
+        return x
 
 
 def get_data_loaders(gesture_num, train_batch_size, val_batch_size, sequence_len):
@@ -76,6 +76,7 @@ def run(option, input_size=128, hidden_size=256, seq_length=10):
                                             metrics={'accuracy': Accuracy(),
                                                      'loss': Loss(F.cross_entropy)},
                                             device=device)
+
     add_handles(model, option, trainer, evaluator, train_loader, val_loader, optimizer)
 
 

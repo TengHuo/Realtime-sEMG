@@ -25,19 +25,28 @@ def summary(model, input_size, batch_size=-1, device="cuda"):
             summary[m_key]["input_shape"] = list(input[0].size())
             summary[m_key]["input_shape"][0] = batch_size
             if isinstance(output, (list, tuple)):
-                summary[m_key]["output_shape"] = [
-                    [-1] + list(o.size())[1:] for o in output
-                ]
+                if isinstance(module, torch.nn.RNNBase):
+                    summary[m_key]["output_shape"] = list(output[0].size())
+                    summary[m_key]["output_shape"][0] = batch_size
+                else:
+                    summary[m_key]["output_shape"] = [
+                        [batch_size] + list(o.size())[1:] for o in output
+                    ]
             else:
                 summary[m_key]["output_shape"] = list(output.size())
                 summary[m_key]["output_shape"][0] = batch_size
 
             params = 0
-            if hasattr(module, "weight") and hasattr(module.weight, "size"):
-                params += torch.prod(torch.LongTensor(list(module.weight.size())))
-                summary[m_key]["trainable"] = module.weight.requires_grad
-            if hasattr(module, "bias") and hasattr(module.bias, "size"):
-                params += torch.prod(torch.LongTensor(list(module.bias.size())))
+            if isinstance(module, nn.RNNBase):
+                summary[m_key]["trainable"] = module.all_weights[0][0].requires_grad
+                for weight in module.all_weights[0]:
+                    params += torch.prod(torch.LongTensor(list(weight.size())))
+            else:
+                if hasattr(module, "weight") and hasattr(module.weight, "size"):
+                    params += torch.prod(torch.LongTensor(list(module.weight.size())))
+                    summary[m_key]["trainable"] = module.weight.requires_grad
+                if hasattr(module, "bias") and hasattr(module.bias, "size"):
+                    params += torch.prod(torch.LongTensor(list(module.bias.size())))
             summary[m_key]["nb_params"] = params
 
         if (
@@ -81,16 +90,15 @@ def summary(model, input_size, batch_size=-1, device="cuda"):
     for h in hooks:
         h.remove()
 
-    print("----------------------------------------------------------------")
-    line_new = "{:>20}  {:>25} {:>15}".format("Layer (type)", "Output Shape", "Param #")
-    print(line_new)
-    print("================================================================")
+    summary_content = "----------------------------------------------------------------\n"
+    summary_content += "{:>20}  {:>25} {:>15}\n".format("Layer (type)", "Output Shape", "Param #")
+    summary_content += "================================================================\n"
     total_params = 0
     total_output = 0
     trainable_params = 0
     for layer in summary:
         # input_shape, output_shape, trainable, nb_params
-        line_new = "{:>20}  {:>25} {:>15}".format(
+        line_new = "{:>20}  {:>25} {:>15}\n".format(
             layer,
             str(summary[layer]["output_shape"]),
             "{0:,}".format(summary[layer]["nb_params"]),
@@ -100,7 +108,7 @@ def summary(model, input_size, batch_size=-1, device="cuda"):
         if "trainable" in summary[layer]:
             if summary[layer]["trainable"] == True:
                 trainable_params += summary[layer]["nb_params"]
-        print(line_new)
+        summary_content += line_new
 
     # assume 4 bytes/number (float on cuda).
     total_input_size = abs(np.prod(input_size) * batch_size * 4. / (1024 ** 2.))
@@ -108,15 +116,15 @@ def summary(model, input_size, batch_size=-1, device="cuda"):
     total_params_size = abs(total_params.numpy() * 4. / (1024 ** 2.))
     total_size = total_params_size + total_output_size + total_input_size
 
-    print("================================================================")
-    print("Total params: {0:,}".format(total_params))
-    print("Trainable params: {0:,}".format(trainable_params))
-    print("Non-trainable params: {0:,}".format(total_params - trainable_params))
-    print("----------------------------------------------------------------")
-    print("Input size (MB): %0.2f" % total_input_size)
-    print("Forward/backward pass size (MB): %0.2f" % total_output_size)
-    print("Params size (MB): %0.2f" % total_params_size)
-    print("Estimated Total Size (MB): %0.2f" % total_size)
-    print("----------------------------------------------------------------")
+    summary_content += "================================================================\n"
+    summary_content += "Total params: {0:,}\n".format(total_params)
+    summary_content += "Trainable params: {0:,}\n".format(trainable_params)
+    summary_content += "Non-trainable params: {0:,}\n".format(total_params - trainable_params)
+    summary_content += "----------------------------------------------------------------\n"
+    summary_content += "Input size (MB): %0.2f\n" % total_input_size
+    summary_content += "Forward/backward pass size (MB): %0.2f\n" % total_output_size
+    summary_content += "Params size (MB): %0.2f\n" % total_params_size
+    summary_content += "Estimated Total Size (MB): %0.2f\n" % total_size
+    summary_content += "----------------------------------------------------------------"
     # return summary
-    return ''
+    return summary_content

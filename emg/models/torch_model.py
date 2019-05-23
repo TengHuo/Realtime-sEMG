@@ -40,27 +40,28 @@ def add_handles(model, option, trainer, evaluator, train_loader, val_loader, opt
     pbar.attach(trainer, ['loss'])
 
     # ----------------------------------------------------------------
-    # TODO: 1. 修改summary，将summary转为字符串return回来
+    # 修改summary，将summary转为字符串return回来
     # TODO: 2. log记录train的loss和accuracy，以及每次val的loss和accuracy（参考keras的history）
     # TODO: 3. 生成history的image
     # TODO: 4. 训练完成后test模型
     # TODO: 5. store report
     model_summary = summary(model, input_size=(10, 128), batch_size=256)
+    # print(model_summary)
     report_content = {
-        'model_name': 'test',
-        'hyperparameter': {'test': 1, 'test2': 2},
+        'model_name': option['model'],
+        'hyperparameter': option,
         'model_summary': model_summary,
         'log': "Training Results - Avg accuracy: 0.10 Avg loss: 0.10\n",
         'history_img_path': './image.png',
         'evaluation': 'evaluation result'
     }
-    report_path = ''
+    report_path = '../../outputs/test.md'
     store_report(report_content, report_path)
     # ----------------------------------------------------------------
 
-    @trainer.on(Events.ITERATION_COMPLETED)
-    def log_training_loss(trainer_):
-        loss_history.append(trainer_.state.output)
+    # @trainer.on(Events.ITERATION_COMPLETED)
+    # def log_training_loss(trainer_):
+    #     loss_history.append(trainer_.state.output)
 
     @trainer.on(Events.EPOCH_COMPLETED)
     def log_training_results(_):
@@ -81,9 +82,9 @@ def add_handles(model, option, trainer, evaluator, train_loader, val_loader, opt
     def save_model(_):
         # BUG: 如果模型被earlystop terminal，则不会保存模型
         print('train completed')
-        f = h5py.File(os.path.join(option['model_folder'], 'history.h5'), 'w')
-        f.create_dataset('loss_history', data=loss_history)
-        f.close()
+        # f = h5py.File(os.path.join(option['model_folder'], 'history.h5'), 'w')
+        # f.create_dataset('loss_history', data=loss_history)
+        # f.close()
         torch.save(model, os.path.join(option['model_folder'], 'model.pkl'))
 
     step_scheduler = StepLR(optimizer, step_size=20, gamma=0.1)
@@ -100,4 +101,4 @@ def add_handles(model, option, trainer, evaluator, train_loader, val_loader, opt
     evaluator.add_event_handler(Events.COMPLETED, handler)
 
     print('start train the model: {}'.format(option['model']))
-    trainer.run(train_loader, max_epochs=option['epoch'])
+    # trainer.run(train_loader, max_epochs=option['epoch'])

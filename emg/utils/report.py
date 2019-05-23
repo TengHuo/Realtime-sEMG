@@ -9,14 +9,19 @@
 # 根据template.md生成name-date-time.md
 
 import time
+import os
 
 
-def _read_template(file_name='./template.md') -> str:
+def _read_template() -> str:
     try:
-        with open(file_name, 'r') as f:
+        template_path = os.path.join(os.sep, *os.path.dirname(os.path.realpath(__file__)).split(os.sep))
+        template_path = os.path.join(template_path, 'template.md')
+        print(template_path)
+        with open(template_path, 'r') as f:
             template = f.read()
         return template
-    except IOError:
+    except IOError as e:
+        print(e)
         print('read file failure')
 
 
@@ -34,7 +39,6 @@ def _generate(content: dict, template: str) -> str:
 def store_report(report_content: dict, file_path: str) -> bool:
     template = _read_template()
     new_report = _generate(report_content, template)
-    print(new_report)
     try:
         with open(file_path, 'w') as f:
             f.write(new_report)
