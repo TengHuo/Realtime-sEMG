@@ -32,12 +32,15 @@ class CapgLSTM(nn.Module):
             num_layers=1,
             batch_first=True,
         )
-        self.fc = nn.Linear(hidden_size, output_size)
+        # self.bn = nn.BatchNorm1d(hidden_size, momentum=0.5)
+        self.fc1 = nn.Linear(hidden_size, hidden_size)
+        self.fc2 = nn.Linear(hidden_size, output_size)
 
     def forward(self, x):
         x, _ = self.rnn(x, None)   # None represents zero initial hidden state
         # choose r_out at the last time step
-        x = self.fc(x[:, -1, :])
+        x = F.relu(self.fc1(x[:, -1, :]))
+        x = self.fc2(x)
         return x
 
 

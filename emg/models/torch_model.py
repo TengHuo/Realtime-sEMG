@@ -53,6 +53,8 @@ def _plot_loss_history(loss_history, acc_history, img_path):
 
 
 def add_handles(model, option, trainer, evaluator, train_loader, val_loader, optimizer):
+    model_summary = summary(model, input_size=(10, 128), batch_size=256)
+    print(model_summary)
     pbar = ProgressBar()
     pbar.attach(trainer, output_transform=lambda loss_acc: {'loss': loss_acc[0],
                                                             'accuracy': loss_acc[1]})
@@ -101,7 +103,6 @@ def add_handles(model, option, trainer, evaluator, train_loader, val_loader, opt
         f = h5py.File(os.path.join(option['model_folder'], 'history.h5'), 'w')
         f.create_dataset('loss_history', data=loss_log)
         f.close()
-        model_summary = summary(model, input_size=(10, 128), batch_size=256)
         report_content = {
             'model_name': option['model'].upper(),
             'hyperparameter': option,

@@ -64,8 +64,8 @@ class CapgDataset(data.Dataset):
             y = y.reshape((y.shape[0], 1)) * np.ones((1, sequence_len))
 
         y = y.astype(int)
-        self.data, self.targets = X[:2048], y[:2048]  # for test
-        # self.data, self.targets = X, y
+        # self.data, self.targets = X[:2048], y[:2048]  # for test
+        self.data, self.targets = X, y
 
     def __getitem__(self, index):
         """
