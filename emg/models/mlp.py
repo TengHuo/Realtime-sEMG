@@ -1,12 +1,4 @@
 # -*- coding: UTF-8 -*-
-# lstm.py
-# @Time     : 15/May/2019
-# @Auther   : TENG HUO
-# @Email    : teng_huo@outlook.com
-# @Version  : 1.0.0
-# @License  : MIT
-#
-#
 
 import os
 import torch
@@ -22,25 +14,18 @@ from emg.models.torch_model import prepare_folder
 from emg.models.torch_model import add_handles
 
 
-class CapgLSTM(nn.Module):
+class MLP(nn.Module):
     def __init__(self, input_size, hidden_size, output_size):
-        super(CapgLSTM, self).__init__()
-
-        self.rnn = nn.GRU(
-            input_size=input_size,
-            hidden_size=hidden_size,
-            num_layers=1,
-            batch_first=True,
-        )
-        # self.bn = nn.BatchNorm1d(hidden_size, momentum=0.5)
-        self.fc1 = nn.Linear(hidden_size, hidden_size)
-        self.fc2 = nn.Linear(hidden_size, output_size)
+        super(MLP, self).__init__()
+        # an affine operation: y = Wx + b
+        self.fc1 = nn.Linear(input_size, hidden_size)
+        self.fc2 = nn.Linear(hidden_size, hidden_size)
+        self.fc3 = nn.Linear(hidden_size, output_size)
 
     def forward(self, x):
-        x, _ = self.rnn(x, None)   # None represents zero initial hidden state
-        # choose r_out at the last time step
-        x = F.relu(self.fc1(x[:, -1, :]))
-        x = self.fc2(x)
+        x = F.relu(self.fc1(x))
+        x = F.relu(self.fc2(x))
+        x = self.fc3(x)
         return x
 
 
@@ -66,7 +51,7 @@ def _calculate_accuracy(_, y, y_pred: torch.Tensor, loss):
     return loss.item(), accuracy
 
 
-def run(option, input_size=128, hidden_size=256, seq_length=10):
+def run(option, input_size=128, hidden_size=256, seq_length=1):
     train_loader, val_loader = get_data_loaders(option['gesture_num'],
                                                 option['train_batch_size'],
                                                 option['val_batch_size'],
@@ -78,11 +63,10 @@ def run(option, input_size=128, hidden_size=256, seq_length=10):
         print('seq2seq model exist! load it!')
         model = torch.load(option['model_path'])
     else:
-        model = CapgLSTM(input_size, hidden_size, option['gesture_num'])
+        model = MLP(input_size, hidden_size, option['gesture_num'])
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    optimizer = torch.optim.SGD(model.parameters(), lr=option['lr'],
-                                momentum=0.8)
+    optimizer = torch.optim.Adam(model.parameters(), lr=option['lr'])
     trainer = create_supervised_trainer(model, optimizer, F.cross_entropy, device=device,
                                         output_transform=_calculate_accuracy)
     evaluator = create_supervised_evaluator(model,
@@ -95,7 +79,7 @@ def run(option, input_size=128, hidden_size=256, seq_length=10):
 
 if __name__ == "__main__":
     args = {
-        'model': 'lstm',
+        'model': 'mlp',
         'gesture_num': 8,
         'lr': 0.01,
         'epoch': 10,

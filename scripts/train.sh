@@ -12,10 +12,10 @@
 #                       --stop_patience 5
 # done
 
-python -m emg.app --model lstm \
+python -m emg.app --model mlp \
                       --gesture_num 8 \
                       --lr 0.01 \
                       --epoch 200 \
                       --train_batch_size 128 \
                       --val_batch_size 1024 \
-                      --stop_patience 10
+                      --stop_patience 7

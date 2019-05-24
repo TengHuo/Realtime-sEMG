@@ -53,7 +53,7 @@ def _plot_loss_history(loss_history, acc_history, img_path):
 
 
 def add_handles(model, option, trainer, evaluator, train_loader, val_loader, optimizer):
-    model_summary = summary(model, input_size=(10, 128), batch_size=256)
+    model_summary = summary(model, input_size=(20, 128), batch_size=256)
     print(model_summary)
     pbar = ProgressBar()
     pbar.attach(trainer, output_transform=lambda loss_acc: {'loss': loss_acc[0],
@@ -71,10 +71,10 @@ def add_handles(model, option, trainer, evaluator, train_loader, val_loader, opt
 
     @trainer.on(Events.EPOCH_COMPLETED)
     def log_training_results(trainer_engine):
-        evaluator.run(train_loader)
-        metrics = evaluator.state.metrics
+        loss_acc = trainer_engine.state.output
+        # TODO: 改为平均算法
         log = "Epoch {}, Training Results - Avg accuracy: {:.2f} Avg loss: {:.2f}"\
-            .format(trainer_engine.state.epoch, metrics['accuracy'], metrics['loss'])
+            .format(trainer_engine.state.epoch, loss_acc[1], loss_acc[0])
         print(log)
         report_log.append(log)
 

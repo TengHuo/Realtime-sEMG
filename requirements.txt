@@ -10,7 +10,7 @@ tensorboard==1.13.1
 tensorflow==1.13.1
 tensorflow-estimator==1.13.0
 torch
-torchvision==0.2.2
+torchvision
 tqdm==4.31.1
 ignite==0.2.0
 click
