@@ -1,4 +1,13 @@
 # -*- coding: UTF-8 -*-
+# mlp.py
+# @Time     : 24/May/2019
+# @Author   : TENG HUO
+# @Email    : teng_huo@outlook.com
+# @Version  : 1.0.0
+# @License  : MIT
+#
+#
+
 
 import os
 import torch
@@ -12,6 +21,9 @@ from ignite.metrics import Accuracy, Loss
 from emg.utils import CapgDataset
 from emg.models.torch_model import prepare_folder
 from emg.models.torch_model import add_handles
+
+
+# TODO: 在这里定义模型超参数，运行时合并到输入的参数中
 
 
 class MLP(nn.Module):
@@ -52,6 +64,10 @@ def _calculate_accuracy(_, y, y_pred: torch.Tensor, loss):
 
 
 def run(option, input_size=128, hidden_size=256, seq_length=1):
+    # TODO: 这部分代码里只需要完成三件事
+    # 1. 加载模型需要的数据
+    # 2. 设置好optimizer
+    # 3. create trainer和evaluator
     train_loader, val_loader = get_data_loaders(option['gesture_num'],
                                                 option['train_batch_size'],
                                                 option['val_batch_size'],
@@ -59,14 +75,15 @@ def run(option, input_size=128, hidden_size=256, seq_length=1):
 
     # create a folder for storing the model
     option['model_folder'], option['model_path'] = prepare_folder(option['model'], option['gesture_num'])
-    if os.path.exists(option['model_path']):
-        print('seq2seq model exist! load it!')
+    if option['load_model'] and os.path.exists(option['model_path']):
+        print('load a pretrained model: {}'.format(option['model']))
         model = torch.load(option['model_path'])
     else:
+        print('train a new model')
         model = MLP(input_size, hidden_size, option['gesture_num'])
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    optimizer = torch.optim.Adam(model.parameters(), lr=option['lr'])
+    optimizer = torch.optim.SGD(model.parameters(), lr=option['lr'])
     trainer = create_supervised_trainer(model, optimizer, F.cross_entropy, device=device,
                                         output_transform=_calculate_accuracy)
     evaluator = create_supervised_evaluator(model,
