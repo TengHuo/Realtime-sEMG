@@ -53,7 +53,8 @@ def _plot_loss_history(loss_history, acc_history, img_path):
 
 
 def add_handles(model, option, trainer, evaluator, train_loader, val_loader, optimizer):
-    model_summary = summary(model, input_size=(20, 128), batch_size=256)
+    model_summary = summary(model, input_size=(option['seq_length'], option['input_size']),
+                            batch_size=option['train_batch_size'])
     print(model_summary)
     pbar = ProgressBar()
     pbar.attach(trainer, output_transform=lambda loss_acc: {'loss': loss_acc[0],

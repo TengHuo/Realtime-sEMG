@@ -23,7 +23,11 @@ from emg.models.torch_model import prepare_folder
 from emg.models.torch_model import add_handles
 
 
-# TODO: 在这里定义模型超参数，运行时合并到输入的参数中
+hyperparameters = {
+    'input_size': 128,
+    'hidden_size': 256,
+    'seq_length': 1
+}
 
 
 class MLP(nn.Module):
@@ -63,27 +67,29 @@ def _calculate_accuracy(_, y, y_pred: torch.Tensor, loss):
     return loss.item(), accuracy
 
 
-def run(option, input_size=128, hidden_size=256, seq_length=1):
+def run(train_args):
     # TODO: 这部分代码里只需要完成三件事
     # 1. 加载模型需要的数据
     # 2. 设置好optimizer
     # 3. create trainer和evaluator
-    train_loader, val_loader = get_data_loaders(option['gesture_num'],
-                                                option['train_batch_size'],
-                                                option['val_batch_size'],
-                                                seq_length)
+    args = {**train_args, **hyperparameters}
+
+    train_loader, val_loader = get_data_loaders(args['gesture_num'],
+                                                args['train_batch_size'],
+                                                args['val_batch_size'],
+                                                args['seq_length'])
 
     # create a folder for storing the model
-    option['model_folder'], option['model_path'] = prepare_folder(option['model'], option['gesture_num'])
-    if option['load_model'] and os.path.exists(option['model_path']):
-        print('load a pretrained model: {}'.format(option['model']))
-        model = torch.load(option['model_path'])
+    args['model_folder'], args['model_path'] = prepare_folder(args['model'], args['gesture_num'])
+    if args['load_model'] and os.path.exists(args['model_path']):
+        print('load a pretrained model: {}'.format(args['model']))
+        model = torch.load(args['model_path'])
     else:
         print('train a new model')
-        model = MLP(input_size, hidden_size, option['gesture_num'])
+        model = MLP(args['input_size'], args['hidden_size'], args['gesture_num'])
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    optimizer = torch.optim.SGD(model.parameters(), lr=option['lr'])
+    optimizer = torch.optim.SGD(model.parameters(), lr=args['lr'])
     trainer = create_supervised_trainer(model, optimizer, F.cross_entropy, device=device,
                                         output_transform=_calculate_accuracy)
     evaluator = create_supervised_evaluator(model,
@@ -91,11 +97,11 @@ def run(option, input_size=128, hidden_size=256, seq_length=1):
                                                      'loss': Loss(F.cross_entropy)},
                                             device=device)
 
-    add_handles(model, option, trainer, evaluator, train_loader, val_loader, optimizer)
+    add_handles(model, args, trainer, evaluator, train_loader, val_loader, optimizer)
 
 
 if __name__ == "__main__":
-    args = {
+    test_args = {
         'model': 'mlp',
         'gesture_num': 8,
         'lr': 0.01,
@@ -105,4 +111,4 @@ if __name__ == "__main__":
         'stop_patience': 5
     }
 
-    run(args)
+    run(test_args)

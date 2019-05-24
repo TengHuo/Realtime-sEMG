@@ -25,9 +25,13 @@ def _read_template() -> str:
 
 
 def _generate(content: dict, template: str) -> str:
+    args_str = ''
+    for k, v in content['hyperparameter'].items():
+        args_str += '- **{}**: {}\n'.format(k, v)
+
     template = template.replace('{{name}}', content['model_name'])
     template = template.replace('{{date}}', time.strftime('%Y-%m-%d %H:%M:%S', time.localtime()))
-    template = template.replace('{{hyperparameters}}', str(content['hyperparameter']))
+    template = template.replace('{{hyperparameters}}', args_str)
     template = template.replace('{{summary}}', content['model_summary'])
     template = template.replace('{{log}}', '\n'.join(content['log']))
     template = template.replace('{{image}}', './history.png')
@@ -47,9 +51,13 @@ def store_report(report_content: dict, file_path: str) -> bool:
 
 
 if __name__ == '__main__':
+    test_arg1 = {'test': 1, 'test2': 2}
+    test_arg2 = {'test3': '123', 'test4': True}
+    test_arg = {**test_arg1, **test_arg2}
+
     test_content = {
         'model_name': 'test',
-        'hyperparameter': {'test': 1, 'test2': 2},
+        'hyperparameter': test_arg,
         'model_summary': 'test',
         'log': "Training Results - Avg accuracy: 0.10 Avg loss: 0.10\n",
         'history_img_path': './history.png',
