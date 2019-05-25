@@ -70,8 +70,8 @@ class CapgDataset(data.Dataset):
             X = X.reshape(new_shape)
 
         y = y.astype(int)
-        # self.data, self.targets = X[:2048], y[:2048]  # for test
-        self.data, self.targets = X, y
+        self.data, self.targets = X[:2048], y[:2048]  # for test
+        # self.data, self.targets = X, y
 
     def __getitem__(self, index):
         """
@@ -191,7 +191,7 @@ def _read_capg_mat_files(path, mat_list):
             continue
         
         if gesture_index not in mat_data.keys():
-            data[gesture_index] = list()
+            mat_data[gesture_index] = list()
         mat_data[gesture_index].append(mat['data'])
 
     return mat_data
