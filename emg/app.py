@@ -16,7 +16,8 @@ import importlib
 
 
 @click.command()
-@click.option('--model', default='seq2seq', help='Model name', type=click.Choice(['lstm', 'seq2seq', 'mlp']))
+@click.option('--model', default='seq2seq', help='Model name',
+              type=click.Choice(['lstm', 'seq2seq', 'mlp', 'cnn']))
 @click.option('--gesture_num', default=8, help='')
 @click.option('--lr', default=0.01, help='Learning rate')
 @click.option('--epoch', default=100, help='Train epoch')

@@ -16,7 +16,7 @@ from emg.models.torch_model import start_train
 
 
 hyperparameters = {
-    'input_size': 128,
+    'input_size': (128,),
     'hidden_size': 256,
     'seq_length': 1,
     'seq_result': False,
@@ -28,7 +28,7 @@ class MLP(nn.Module):
     def __init__(self, input_size, hidden_size, output_size):
         super(MLP, self).__init__()
         # an affine operation: y = Wx + b
-        self.fc1 = nn.Linear(input_size, hidden_size)
+        self.fc1 = nn.Linear(input_size[0], hidden_size)
         self.fc2 = nn.Linear(hidden_size, hidden_size)
         self.fc3 = nn.Linear(hidden_size, output_size)
 
