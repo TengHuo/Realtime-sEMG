@@ -77,7 +77,7 @@ def start_train(args, model, optimizer, trainer_factory=None,
     else:
         print('train a new model')
     model_summary = summary(model=model,
-                            input_size=(args['seq_length'], args['input_size']),
+                            input_size=(args['seq_length'], *args['input_size']),
                             batch_size=args['train_batch_size'],
                             device=device)
     print(model_summary)

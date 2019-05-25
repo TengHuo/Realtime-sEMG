@@ -15,7 +15,7 @@ from emg.models.torch_model import start_train
 
 
 hyperparameters = {
-    'input_size': 128,
+    'input_size': (128,),
     'hidden_size': 256,
     'seq_length': 10,
     'seq_result': False,
@@ -28,7 +28,7 @@ class LSTM(nn.Module):
         super(LSTM, self).__init__()
 
         self.rnn = nn.GRU(
-            input_size=input_size,
+            input_size=input_size[0],
             hidden_size=hidden_size,
             num_layers=1,
             batch_first=True,

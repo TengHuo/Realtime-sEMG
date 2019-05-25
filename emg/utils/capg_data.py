@@ -66,7 +66,7 @@ class CapgDataset(data.Dataset):
         # reshape x to frame (16, 8)
         if frame_x:
             old_shape = X.shape
-            new_shape = (*old_shape[0:-1], 16, 8)
+            new_shape = (*old_shape[0:-1], 1, 16, 8)
             X = X.reshape(new_shape)
 
         y = y.astype(int)
