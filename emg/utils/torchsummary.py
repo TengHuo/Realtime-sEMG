@@ -12,7 +12,7 @@ from collections import OrderedDict
 import numpy as np
 
 
-def summary(model, input_size, batch_size=-1, device="cuda"):
+def summary(model, input_size, batch_size, device):
 
     def register_hook(module):
 
@@ -55,12 +55,6 @@ def summary(model, input_size, batch_size=-1, device="cuda"):
             and not (module == model)
         ):
             hooks.append(module.register_forward_hook(hook))
-
-    device = device.lower()
-    assert device in [
-        "cuda",
-        "cpu",
-    ], "Input device is not valid, please specify 'cuda' or 'cpu'"
 
     if device == "cuda" and torch.cuda.is_available():
         dtype = torch.cuda.FloatTensor

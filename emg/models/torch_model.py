@@ -67,6 +67,7 @@ def _prepare_folder(model_name, gesture_num):
 
 def start_train(args, model, optimizer, trainer_factory=None,
                 evaluator_factory=None, data_loader=None):
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     # create a folder for storing the model
     args['model_folder'] = _prepare_folder(args['model'], args['gesture_num'])
     params_path = os.path.join(args['model_folder'], 'params.pkl')
@@ -77,7 +78,8 @@ def start_train(args, model, optimizer, trainer_factory=None,
         print('train a new model')
     model_summary = summary(model=model,
                             input_size=(args['seq_length'], *args['input_size']),
-                            batch_size=args['train_batch_size'])
+                            batch_size=args['train_batch_size'],
+                            device=device)
     print(model_summary)
 
     # data loader
@@ -87,7 +89,6 @@ def start_train(args, model, optimizer, trainer_factory=None,
         train_loader, val_loader = data_loader(args)
 
     # create engines
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     if trainer_factory is None and evaluator_factory is None:
         trainer_factory = create_supervised_trainer
         evaluator_factory = create_supervised_evaluator
