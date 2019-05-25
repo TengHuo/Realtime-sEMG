@@ -10,6 +10,7 @@
 
 import time
 import os
+import matplotlib.pyplot as plt
 
 
 def _read_template() -> str:
@@ -39,7 +40,25 @@ def _generate(content: dict, template: str) -> str:
     return generated_report
 
 
-def store_report(report_content: dict, file_path: str) -> bool:
+def save_history_figures(loss_history, acc_history, img_path):
+    plt.figure(figsize=(15, 7))
+    plt.subplot(121)
+    plt.title('train loss')
+    plt.xlabel('iteration')
+    plt.ylabel('loss')
+    loss_x = list(range(len(loss_history)))
+    plt.plot(loss_x, loss_history)
+
+    plt.subplot(122)
+    plt.title('train accuracy')
+    plt.xlabel('iteration')
+    plt.ylabel('accuracy')
+    acc_x = list(range(len(acc_history)))
+    plt.plot(acc_x, acc_history)
+    plt.savefig(img_path)
+
+
+def save_report(report_content: dict, file_path: str) -> bool:
     template = _read_template()
     new_report = _generate(report_content, template)
     try:

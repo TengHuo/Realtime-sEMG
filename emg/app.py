@@ -23,11 +23,11 @@ import importlib
 @click.option('--train_batch_size', default=256, help='')
 @click.option('--val_batch_size', default=1024, help='')
 @click.option('--stop_patience', default=5, help='')
-@click.option('--load_model', default=False, help='load the pretrain model')
+@click.option('--load_model', default=False, type=bool, help='load the pretrain model')
 def main(**args):
     model_name = 'emg.models.{}'.format(args['model'])
     model = importlib.import_module(model_name)
-    model.run(args)
+    model.main(args)
 
 
 if __name__ == '__main__':

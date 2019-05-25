@@ -9,24 +9,18 @@
 #
 
 
-import os
 import torch
 import torch.nn as nn
-from torch.utils.data import DataLoader
 import torch.nn.functional as F
-
-from ignite.engine import create_supervised_trainer, create_supervised_evaluator
-from ignite.metrics import Accuracy, Loss
-
-from emg.utils import CapgDataset
-from emg.models.torch_model import prepare_folder
-from emg.models.torch_model import add_handles
+from emg.models.torch_model import start_train
 
 
 hyperparameters = {
     'input_size': 128,
     'hidden_size': 256,
-    'seq_length': 1
+    'seq_length': 1,
+    'seq_result': False,
+    'frame_input': False
 }
 
 
@@ -45,59 +39,14 @@ class MLP(nn.Module):
         return x
 
 
-def get_data_loaders(gesture_num, train_batch_size, val_batch_size, sequence_len):
-    train_loader = DataLoader(CapgDataset(gestures=gesture_num,
-                                          sequence_len=sequence_len,
-                                          train=True),
-                              batch_size=train_batch_size, shuffle=True)
-
-    val_loader = DataLoader(CapgDataset(gestures=gesture_num,
-                                        sequence_len=sequence_len,
-                                        train=False),
-                            batch_size=val_batch_size, shuffle=False)
-
-    return train_loader, val_loader
-
-
-def _calculate_accuracy(_, y, y_pred: torch.Tensor, loss):
-    y_pred = F.log_softmax(y_pred, dim=1)
-    _, y_pred = torch.max(y_pred, dim=1)
-    correct = (y_pred == y).sum().item()
-    accuracy = correct / y.size(0)
-    return loss.item(), accuracy
-
-
-def run(train_args):
-    # TODO: 这部分代码里只需要完成三件事
-    # 1. 加载模型需要的数据
-    # 2. 设置好optimizer
-    # 3. create trainer和evaluator
+def main(train_args):
+    # 1. 设置好optimizer
+    # 2. 定义好model
     args = {**train_args, **hyperparameters}
-
-    train_loader, val_loader = get_data_loaders(args['gesture_num'],
-                                                args['train_batch_size'],
-                                                args['val_batch_size'],
-                                                args['seq_length'])
-
-    # create a folder for storing the model
-    args['model_folder'], args['model_path'] = prepare_folder(args['model'], args['gesture_num'])
-    if args['load_model'] and os.path.exists(args['model_path']):
-        print('load a pretrained model: {}'.format(args['model']))
-        model = torch.load(args['model_path'])
-    else:
-        print('train a new model')
-        model = MLP(args['input_size'], args['hidden_size'], args['gesture_num'])
-
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    model = MLP(args['input_size'], args['hidden_size'], args['gesture_num'])
     optimizer = torch.optim.SGD(model.parameters(), lr=args['lr'])
-    trainer = create_supervised_trainer(model, optimizer, F.cross_entropy, device=device,
-                                        output_transform=_calculate_accuracy)
-    evaluator = create_supervised_evaluator(model,
-                                            metrics={'accuracy': Accuracy(),
-                                                     'loss': Loss(F.cross_entropy)},
-                                            device=device)
 
-    add_handles(model, args, trainer, evaluator, train_loader, val_loader, optimizer)
+    start_train(args, model, optimizer)
 
 
 if __name__ == "__main__":
@@ -108,7 +57,8 @@ if __name__ == "__main__":
         'epoch': 10,
         'train_batch_size': 256,
         'val_batch_size': 1024,
-        'stop_patience': 5
+        'stop_patience': 5,
+        'load_model': False
     }
 
-    run(test_args)
+    main(test_args)
