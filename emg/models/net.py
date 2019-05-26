@@ -11,10 +11,8 @@
 
 import torch
 import torch.nn as nn
-from torch.nn.modules.utils import _pair
 from emg.models.torch_model import start_train
 
-import torchvision
 from torchvision import datasets, transforms
 from torch.utils.data import DataLoader
 import torch.nn.functional as F
