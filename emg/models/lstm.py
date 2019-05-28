@@ -64,6 +64,7 @@ if __name__ == "__main__":
         'train_batch_size': 256,
         'val_batch_size': 1024,
         'stop_patience': 5,
+        'log_interval': 100,
         'load_model': False
     }
 

@@ -67,8 +67,8 @@ def _prepare_folder(model_name, gesture_num):
     return model_folder
 
 
-def start_train(args, model, optimizer, test_mode, trainer_factory=None,
-                evaluator_factory=None, data_loader=None):
+def start_train(args, model, optimizer, test_mode,
+                trainer_factory=None, evaluator_factory=None, data_loader=None):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     # create a folder for storing the model
     args['model_folder'] = _prepare_folder(args['model'], args['gesture_num'])
@@ -80,7 +80,7 @@ def start_train(args, model, optimizer, test_mode, trainer_factory=None,
         print('train a new model')
     model_summary = summary(model=model,
                             # BUG: bn1d的input_size不能是一个tuple
-                            input_size=(128,),  # (args['seq_length'], *args['input_size']),
+                            input_size=(args['seq_length'], *args['input_size']),
                             batch_size=args['train_batch_size'],
                             device=device)
     print(model_summary)
