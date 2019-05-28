@@ -68,4 +68,4 @@ if __name__ == "__main__":
         'load_model': False
     }
 
-    main(test_args, test_mode=False)
+    main(test_args, test_mode=True)

@@ -11,7 +11,7 @@
 import os
 import h5py
 import torch
-
+import numpy as np
 
 import torch.nn.functional as F
 from torch.utils.data import DataLoader
@@ -80,7 +80,8 @@ def start_train(args, model, optimizer, test_mode,
         print('train a new model')
     model_summary = summary(model=model,
                             # BUG: bn1d的input_size不能是一个tuple
-                            input_size=(args['seq_length'], *args['input_size']),
+                            input_size=args['input_size'],
+                            # input_size=(args['seq_length'], *args['input_size']),
                             batch_size=args['train_batch_size'],
                             device=device)
     print(model_summary)
@@ -109,30 +110,28 @@ def start_train(args, model, optimizer, test_mode,
 
     # configure handlers
     report_log = []
-    loss_log = []
-    acc_log = []
+    # history format: [[iteration index, loss, accuracy]]
+    train_history = []
+    eval_history = []
     @trainer.on(Events.ITERATION_COMPLETED)
     def log_training_loss(trainer_engine):
         loss_acc = trainer_engine.state.output
-        if trainer_engine.state.iteration % args['log_interval'] == 1:
-            loss_log.append(loss_acc[0])
-            acc_log.append(loss_acc[1])
-
-    @trainer.on(Events.EPOCH_COMPLETED)
-    def log_training_results(trainer_engine):
-        log = "Epoch {}, Training Results - Avg accuracy: {:.2f} Avg loss: {:.2f}"\
-            .format(trainer_engine.state.epoch, acc_log[-1], loss_log[-1])
-        print(log)
-        report_log.append(log)
+        iter_index = trainer_engine.state.iteration
+        if iter_index % args['log_interval'] == 1:
+            train_history.append([iter_index, loss_acc[0], loss_acc[1]])
 
     @trainer.on(Events.EPOCH_COMPLETED)
     def log_validation_results(trainer_engine):
         evaluator.run(val_loader)
         metrics = evaluator.state.metrics
+        iter_index = trainer_engine.state.iteration
+        loss = metrics['loss']
+        acc = metrics['accuracy']
         log = "Epoch {}, Validation Results - Avg accuracy: {:.2f} Avg loss: {:.2f}"\
-            .format(trainer_engine.state.epoch, metrics['accuracy'], metrics['loss'])
+            .format(trainer_engine.state.epoch, acc, loss)
         print(log)
         report_log.append(log)
+        eval_history.append([iter_index, loss, acc])
 
     # ----------------------------------------------------------------
     # 修改summary，将summary转为字符串return回来
@@ -157,12 +156,16 @@ def start_train(args, model, optimizer, test_mode,
         }
         report_path = os.path.join(args['model_folder'], 'report.md')
         save_report(report_content, report_path)
+        # generate a firgure of loss and accuracy
         history_fig_path = os.path.join(args['model_folder'], 'history.png')
-        save_history_figures(loss_log, acc_log, history_fig_path)
-        # store train history
+        train_history_array = np.array(train_history)
+        eval_history_array = np.array(eval_history)
+        save_history_figures(train_history_array, eval_history_array, history_fig_path)
+        # store loss history and accuracy history
         train_history_path = os.path.join(args['model_folder'], 'history.h5')
         f = h5py.File(train_history_path, 'w')
-        f.create_dataset('loss_history', data=loss_log)
+        f.create_dataset('train_history', data=train_history_array)
+        f.create_dataset('eval_history', data=eval_history_array)
         f.close()
 
     # add a learning rate scheduler

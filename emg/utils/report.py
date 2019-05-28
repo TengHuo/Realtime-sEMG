@@ -11,6 +11,7 @@
 import time
 import os
 import matplotlib.pyplot as plt
+import numpy as np
 
 
 def _read_template() -> str:
@@ -40,21 +41,25 @@ def _generate(content: dict, template: str) -> str:
     return generated_report
 
 
-def save_history_figures(loss_history, acc_history, img_path):
+def save_history_figures(train_array: np.ndarray, eval_array: np.ndarray, img_path):
+    """ history format: [[iteration index, loss, accuracy]] """
     plt.figure(figsize=(15, 7))
     plt.subplot(121)
-    plt.title('train loss')
+    plt.title('loss history')
     plt.xlabel('iteration')
     plt.ylabel('loss')
-    loss_x = list(range(len(loss_history)))
-    plt.plot(loss_x, loss_history)
+    plt.plot(train_array[:, 0], train_array[:, 1], )
+    plt.plot(eval_array[:, 0], eval_array[:, 1])
+    plt.legend(['Train', 'Evaluation'], loc='upper left')
 
     plt.subplot(122)
-    plt.title('train accuracy')
+    plt.title('accuracy history')
     plt.xlabel('iteration')
     plt.ylabel('accuracy')
-    acc_x = list(range(len(acc_history)))
-    plt.plot(acc_x, acc_history)
+    plt.plot(train_array[:, 0], train_array[:, 2])
+    plt.plot(eval_array[:, 0], eval_array[:, 2])
+    plt.legend(['Train', 'Evaluation'], loc='upper left')
+
     plt.savefig(img_path)
 
 
@@ -83,4 +88,4 @@ if __name__ == '__main__':
         'evaluation': 'evaluation result'
     }
 
-    store_report(test_content, '../../outputs/test.md')
+    save_report(test_content, '../../outputs/test.md')
