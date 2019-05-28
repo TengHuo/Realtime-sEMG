@@ -45,14 +45,14 @@ class MLP(nn.Module):
         return x
 
 
-def main(train_args, test_model=False):
+def main(train_args, test_mode=False):
     # 1. 设置好optimizer
     # 2. 定义好model
     args = {**train_args, **hyperparameters}
     model = MLP(args['input_size'], args['hidden_size'], args['gesture_num'])
     optimizer = torch.optim.Adam(model.parameters(), lr=args['lr'])
 
-    start_train(args, model, optimizer, test_model)
+    start_train(args, model, optimizer, test_mode)
 
 
 if __name__ == "__main__":
@@ -68,4 +68,4 @@ if __name__ == "__main__":
         'load_model': False
     }
 
-    main(test_args, test_model=False)
+    main(test_args, test_mode=False)

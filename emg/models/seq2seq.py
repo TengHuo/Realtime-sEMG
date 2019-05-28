@@ -248,14 +248,14 @@ class Transformer(nn.Module):
         return dec_output
 
 
-def main(train_args, test_model=False):
+def main(train_args, test_mode=False):
     # 1. 设置好optimizer
     # 2. 定义好model
     args = {**train_args, **hyperparameters}
     model = Transformer(args['seq_length'])
     optimizer = torch.optim.Adam(model.parameters(), lr=args['lr'])
 
-    start_train(args, model, optimizer, test_model)
+    start_train(args, model, optimizer, test_mode)
 
 
 if __name__ == "__main__":
@@ -271,4 +271,4 @@ if __name__ == "__main__":
         'load_model': False
     }
 
-    main(test_args, test_model=False)
+    main(test_args, test_mode=False)
