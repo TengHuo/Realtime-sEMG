@@ -26,7 +26,7 @@ class CapgDataset(data.Dataset):
     """
 
     def __init__(self, gesture=8, sequence_len=1, sequence_result=False,
-                 frame_x=False, train=True, transform=None):
+                 frame_x=False, train=True, TEST=False, transform=None):
 
         self.transform = transform
         self.train = train  # training set or test set
@@ -70,8 +70,11 @@ class CapgDataset(data.Dataset):
             X = X.reshape(new_shape)
 
         y = y.astype(int)
-        # self.data, self.targets = X[:2048], y[:2048]  # for test
-        self.data, self.targets = X, y
+
+        if TEST:
+            self.data, self.targets = X[:20480], y[:20480]  # for test
+        else:
+            self.data, self.targets = X, y
 
     def __getitem__(self, index):
         """

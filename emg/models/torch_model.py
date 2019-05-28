@@ -27,11 +27,12 @@ from emg.utils import CapgDataset
 from emg.utils import summary, save_report, save_history_figures
 
 
-def _get_data_loaders(model_args):
+def _get_data_loaders(model_args, test_model):
     train_loader = DataLoader(CapgDataset(gesture=model_args['gesture_num'],
                                           sequence_len=model_args['seq_length'],
                                           sequence_result=model_args['seq_result'],
                                           frame_x=model_args['frame_input'],
+                                          TEST=test_model,
                                           train=True),
                               batch_size=model_args['train_batch_size'],
                               shuffle=True)
@@ -40,6 +41,7 @@ def _get_data_loaders(model_args):
                                         sequence_len=model_args['seq_length'],
                                         sequence_result=model_args['seq_result'],
                                         frame_x=model_args['frame_input'],
+                                        TEST=test_model,
                                         train=False),
                             batch_size=model_args['val_batch_size'],
                             shuffle=False)
@@ -65,7 +67,7 @@ def _prepare_folder(model_name, gesture_num):
     return model_folder
 
 
-def start_train(args, model, optimizer, trainer_factory=None,
+def start_train(args, model, optimizer, test_mode, trainer_factory=None,
                 evaluator_factory=None, data_loader=None):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     # create a folder for storing the model
@@ -77,16 +79,17 @@ def start_train(args, model, optimizer, trainer_factory=None,
     else:
         print('train a new model')
     model_summary = summary(model=model,
-                            input_size=(args['seq_length'], *args['input_size']),
+                            # BUG: bn1d的input_size不能是一个tuple
+                            input_size=(128,),  # (args['seq_length'], *args['input_size']),
                             batch_size=args['train_batch_size'],
                             device=device)
     print(model_summary)
 
     # data loader
     if data_loader is None:
-        train_loader, val_loader = _get_data_loaders(args)
+        train_loader, val_loader = _get_data_loaders(args, test_mode)
     else:
-        train_loader, val_loader = data_loader(args)
+        train_loader, val_loader = data_loader(args, test_mode)
 
     # create engines
     if trainer_factory is None and evaluator_factory is None:
@@ -111,15 +114,14 @@ def start_train(args, model, optimizer, trainer_factory=None,
     @trainer.on(Events.ITERATION_COMPLETED)
     def log_training_loss(trainer_engine):
         loss_acc = trainer_engine.state.output
-        loss_log.append(loss_acc[0])
-        acc_log.append(loss_acc[1])
+        if trainer_engine.state.iteration % args['log_interval'] == 1:
+            loss_log.append(loss_acc[0])
+            acc_log.append(loss_acc[1])
 
     @trainer.on(Events.EPOCH_COMPLETED)
     def log_training_results(trainer_engine):
-        loss_acc = trainer_engine.state.output
-        # TODO: 改为平均算法
         log = "Epoch {}, Training Results - Avg accuracy: {:.2f} Avg loss: {:.2f}"\
-            .format(trainer_engine.state.epoch, loss_acc[1], loss_acc[0])
+            .format(trainer_engine.state.epoch, acc_log[-1], loss_log[-1])
         print(log)
         report_log.append(log)
 

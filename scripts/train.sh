@@ -10,5 +10,6 @@ do
                       --train_batch_size 128 \
                       --val_batch_size 1024 \
                       --stop_patience 7 \
+                      --log_interval 100 \
                       --load_model False
 done
