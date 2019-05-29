@@ -98,14 +98,14 @@ class CNN(nn.Module):
         return self.fc(x)
 
 
-def main(train_args):
+def main(train_args, test_mode=False):
     # 1. 设置好optimizer
     # 2. 定义好model
     args = {**train_args, **hyperparameters}
     model = CNN(args['gesture_num'])
-    optimizer = torch.optim.SGD(model.parameters(), lr=args['lr'])
+    optimizer = torch.optim.Adam(model.parameters(), lr=args['lr'])
 
-    start_train(args, model, optimizer)
+    start_train(args, model, optimizer, test_mode)
 
 
 if __name__ == "__main__":
@@ -120,4 +120,4 @@ if __name__ == "__main__":
         'load_model': False
     }
 
-    main(test_args)
+    main(test_args, test_mode=False)

@@ -50,7 +50,7 @@ def save_history_figures(train_array: np.ndarray, eval_array: np.ndarray, img_pa
     plt.ylabel('loss')
     plt.plot(train_array[:, 0], train_array[:, 1], )
     plt.plot(eval_array[:, 0], eval_array[:, 1])
-    plt.legend(['Train', 'Evaluation'], loc='upper left')
+    plt.legend(['Train', 'Evaluation'], loc='upper right')
 
     plt.subplot(122)
     plt.title('accuracy history')

@@ -57,7 +57,7 @@ def main(train_args, test_mode=False):
     # 2. 定义好model
     args = {**train_args, **hyperparameters}
     model = LSTM(args['input_size'], args['hidden_size'], args['gesture_num'])
-    optimizer = torch.optim.SGD(model.parameters(), lr=args['lr'])
+    optimizer = torch.optim.Adam(model.parameters(), lr=args['lr'])
 
     start_train(args, model, optimizer, test_mode)
 

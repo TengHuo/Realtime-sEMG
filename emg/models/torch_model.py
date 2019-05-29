@@ -80,8 +80,8 @@ def start_train(args, model, optimizer, test_mode,
         print('train a new model')
     model_summary = summary(model=model,
                             # BUG: bn1d的input_size不能是一个tuple
-                            input_size=args['input_size'],
-                            # input_size=(args['seq_length'], *args['input_size']),
+                            # input_size=args['input_size'],
+                            input_size=(args['seq_length'], *args['input_size']),
                             batch_size=args['train_batch_size'],
                             device=device)
     print(model_summary)

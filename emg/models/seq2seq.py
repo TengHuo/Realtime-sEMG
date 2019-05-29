@@ -42,8 +42,9 @@ def get_sinusoid_encoding_table(n_position, d_hid, padding_idx=None):
         # zero vector for padding dimension
         sinusoid_table[padding_idx] = 0.
 
-    value = torch.FloatTensor(sinusoid_table)
-    return value
+    # value = torch.Tensor(sinusoid_table)
+    value = torch.from_numpy(sinusoid_table)
+    return value.to('cuda')
 
 
 def get_attn_key_pad_mask(seq_q):
@@ -195,11 +196,13 @@ class Encoder(nn.Module):
 
     def forward(self, src_seq, src_pos):
         # -- Prepare masks
+        src_seq = src_seq.to('cuda')  # BUG: 不能在cuda上训练
         slf_attn_mask = get_attn_key_pad_mask(src_seq)
         non_pad_mask = get_non_pad_mask(src_seq)
 
         # -- Forward
         pos_emb = self.position_enc(src_pos)
+        pos_emb = pos_emb.to(torch.float32)
         enc_output = src_seq + pos_emb
 
         for enc_layer in self.layer_stack:
@@ -241,6 +244,7 @@ class Transformer(nn.Module):
         src_pos = torch.arange(1, src_seq.size(1)+1)
         src_pos = src_pos.repeat(src_seq.size(0))
         src_pos = src_pos.view(-1, src_seq.size(1))
+        src_pos = src_pos.to('cuda')
         enc_output = self.encoder(src_seq, src_pos)
         # print(src_seq.size())
         # print(enc_output.size())
