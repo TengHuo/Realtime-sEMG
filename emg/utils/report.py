@@ -8,7 +8,6 @@
 #
 # 根据template.md生成name-date-time.md
 
-import time
 import os
 import matplotlib.pyplot as plt
 import numpy as np
@@ -32,7 +31,7 @@ def _generate(content: dict, template: str) -> str:
         args_str += '- **{}**: {}\n'.format(k, v)
 
     template = template.replace('{{name}}', content['model_name'])
-    template = template.replace('{{date}}', time.strftime('%Y-%m-%d %H:%M:%S', time.localtime()))
+    template = template.replace('{{date}}', content['datetime'])
     template = template.replace('{{hyperparameters}}', args_str)
     template = template.replace('{{summary}}', content['model_summary'])
     template = template.replace('{{log}}', '\n'.join(content['log']))
@@ -48,7 +47,7 @@ def save_history_figures(train_array: np.ndarray, eval_array: np.ndarray, img_pa
     plt.title('loss history')
     plt.xlabel('iteration')
     plt.ylabel('loss')
-    plt.plot(train_array[:, 0], train_array[:, 1], )
+    plt.plot(train_array[:, 0], train_array[:, 1])
     plt.plot(eval_array[:, 0], eval_array[:, 1])
     plt.legend(['Train', 'Evaluation'], loc='upper right')
 

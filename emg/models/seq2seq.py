@@ -12,7 +12,9 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from emg.models.torch_model import start_train
+
+from emg.models.train_manager import Manager
+from emg.data_loader.capg_data import default_capg_loaders
 
 
 hyperparameters = {
@@ -259,20 +261,26 @@ def main(train_args, test_mode=False):
     model = Transformer(args['seq_length'])
     optimizer = torch.optim.Adam(model.parameters(), lr=args['lr'])
 
-    start_train(args, model, optimizer, test_mode)
+    manager = Manager(args, model, default_capg_loaders)
+    manager.compile(optimizer)
+    manager.summary()
+    manager.start_train()
+    # manager.test()  # TODO
+    manager.finish()
 
 
 if __name__ == "__main__":
     test_args = {
         'model': 'seq2seq',
         'gesture_num': 8,
-        'lr': 0.01,
+        'lr': 0.001,
+        'lr_step': 5,
         'epoch': 10,
         'train_batch_size': 64,
         'val_batch_size': 1024,
         'stop_patience': 5,
         'log_interval': 100,
-        'load_model': False
+        'test': False
     }
 
     main(test_args, test_mode=False)

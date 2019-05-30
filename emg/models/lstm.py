@@ -11,7 +11,9 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from emg.models.torch_model import start_train
+
+from emg.models.train_manager import Manager
+from emg.data_loader.capg_data import default_capg_loaders
 
 
 hyperparameters = {
@@ -52,14 +54,19 @@ class LSTM(nn.Module):
         return x
 
 
-def main(train_args, test_mode=False):
+def main(train_args):
     # 1. 设置好optimizer
     # 2. 定义好model
     args = {**train_args, **hyperparameters}
     model = LSTM(args['input_size'], args['hidden_size'], args['gesture_num'])
-    optimizer = torch.optim.Adam(model.parameters(), lr=args['lr'])
+    optimizer = torch.optim.Adam(model.parameters(), lr=args['lr'], weight_decay=0.01)
 
-    start_train(args, model, optimizer, test_mode)
+    manager = Manager(args, model, default_capg_loaders)
+    manager.compile(optimizer)
+    manager.summary()
+    manager.start_train()
+    # manager.test()  # TODO
+    manager.finish()
 
 
 if __name__ == "__main__":
@@ -67,12 +74,13 @@ if __name__ == "__main__":
         'model': 'lstm',
         'gesture_num': 8,
         'lr': 0.001,
-        'epoch': 10,
+        'lr_step': 5,
+        'epoch': 30,
         'train_batch_size': 256,
         'val_batch_size': 1024,
         'stop_patience': 7,
         'log_interval': 100,
-        'load_model': False
+        'test': False
     }
 
-    main(test_args, test_mode=False)
+    main(test_args)

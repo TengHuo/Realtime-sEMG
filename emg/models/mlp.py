@@ -12,13 +12,14 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from emg.models.torch_model import start_train
+
+from emg.models.train_manager import Manager
+from emg.data_loader.capg_data import default_capg_loaders
 
 
 hyperparameters = {
     'input_size': (128,),
     'hidden_size': 256,
-    'seq_length': 1,
     'seq_result': False,
     'frame_input': False
 }
@@ -45,14 +46,19 @@ class MLP(nn.Module):
         return x
 
 
-def main(train_args, test_mode=False):
+def main(train_args):
     # 1. 设置好optimizer
     # 2. 定义好model
     args = {**train_args, **hyperparameters}
     model = MLP(args['input_size'], args['hidden_size'], args['gesture_num'])
     optimizer = torch.optim.Adam(model.parameters(), lr=args['lr'])
 
-    start_train(args, model, optimizer, test_mode)
+    manager = Manager(args, model, default_capg_loaders)
+    manager.compile(optimizer)
+    manager.summary()
+    manager.start_train()
+    # manager.test()  # TODO
+    manager.finish()
 
 
 if __name__ == "__main__":
@@ -60,12 +66,13 @@ if __name__ == "__main__":
         'model': 'mlp',
         'gesture_num': 8,
         'lr': 0.001,
+        'lr_step': 5,
         'epoch': 10,
-        'train_batch_size': 32,
-        'val_batch_size': 1024,
+        'train_batch_size': 1024,
+        'val_batch_size': 2048,
         'stop_patience': 5,
         'log_interval': 100,
-        'load_model': False
+        'test': True
     }
 
-    main(test_args, test_mode=True)
+    main(test_args)

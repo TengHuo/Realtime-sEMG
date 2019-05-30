@@ -12,8 +12,9 @@
 import torch
 import torch.nn as nn
 from torch.nn.modules.utils import _pair
-from emg.models.torch_model import start_train
 
+from emg.models.train_manager import Manager
+from emg.data_loader.capg_data import default_capg_loaders
 
 hyperparameters = {
     'input_size': (16, 8),
@@ -98,14 +99,19 @@ class CNN(nn.Module):
         return self.fc(x)
 
 
-def main(train_args, test_mode=False):
+def main(train_args):
     # 1. 设置好optimizer
     # 2. 定义好model
     args = {**train_args, **hyperparameters}
     model = CNN(args['gesture_num'])
     optimizer = torch.optim.Adam(model.parameters(), lr=args['lr'])
 
-    start_train(args, model, optimizer, test_mode)
+    manager = Manager(args, model, default_capg_loaders)
+    manager.compile(optimizer)
+    manager.summary()
+    manager.start_train()
+    # manager.test()  # TODO
+    manager.finish()
 
 
 if __name__ == "__main__":
@@ -113,11 +119,12 @@ if __name__ == "__main__":
         'model': 'cnn',
         'gesture_num': 8,
         'lr': 0.01,
+        'lr_step': 5,
         'epoch': 10,
         'train_batch_size': 64,
         'val_batch_size': 256,
         'stop_patience': 5,
-        'load_model': False
+        'test': False
     }
 
-    main(test_args, test_mode=False)
+    main(test_args)

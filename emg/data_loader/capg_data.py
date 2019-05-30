@@ -12,12 +12,35 @@ import os
 import re
 import h5py
 
-from torch.utils import data
+from torch.utils.data import DataLoader, Dataset
 from scipy.io import loadmat
 import numpy as np
 
 
-class CapgDataset(data.Dataset):
+def default_capg_loaders(model_args: dict):
+    seq_length = model_args['seq_length'] if 'seq_length' in model_args else 1
+    train_loader = DataLoader(CapgDataset(gesture=model_args['gesture_num'],
+                                          sequence_len=seq_length,
+                                          sequence_result=model_args['seq_result'],
+                                          frame_x=model_args['frame_input'],
+                                          TEST=model_args['test'],
+                                          train=True),
+                              batch_size=model_args['train_batch_size'],
+                              shuffle=True)
+
+    val_loader = DataLoader(CapgDataset(gesture=model_args['gesture_num'],
+                                        sequence_len=seq_length,
+                                        sequence_result=model_args['seq_result'],
+                                        frame_x=model_args['frame_input'],
+                                        TEST=model_args['test'],
+                                        train=False),
+                            batch_size=model_args['val_batch_size'],
+                            shuffle=False)
+
+    return train_loader, val_loader
+
+
+class CapgDataset(Dataset):
     """An abstract class representing a Dataset.
 
     All other datasets should subclass it. All subclasses should override

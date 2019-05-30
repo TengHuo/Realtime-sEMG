@@ -11,3 +11,4 @@ torchvision
 tqdm==4.31.1
 ignite==0.2.0
 click
+tensorflow
