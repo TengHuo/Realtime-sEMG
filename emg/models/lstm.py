@@ -32,13 +32,13 @@ class LSTM(nn.Module):
         self.rnn = nn.GRU(
             input_size=input_size[0],
             hidden_size=hidden_size,
-            num_layers=1,
+            num_layers=3,
             batch_first=True,
         )
         # self.bn1 = nn.BatchNorm1d(input_size[0], momentum=0.9)
-        self.bn2 = nn.BatchNorm1d(hidden_size, momentum=0.9)
+        # self.bn2 = nn.BatchNorm1d(hidden_size, momentum=0.9)
         self.bn3 = nn.BatchNorm1d(hidden_size, momentum=0.9)
-        self.fc1 = nn.Linear(hidden_size, hidden_size)
+        # self.fc1 = nn.Linear(hidden_size, hidden_size)
         self.fc2 = nn.Linear(hidden_size, output_size)
 
     def forward(self, x):
@@ -47,8 +47,8 @@ class LSTM(nn.Module):
         x, _ = self.rnn(x, None)   # None represents zero initial hidden state
         # choose r_out at the last time step
         x = x[:, -1, :]
-        x = self.bn2(x)
-        x = self.fc1(F.relu(x))
+        # x = self.bn2(x)
+        # x = self.fc1(F.relu(x))
         x = self.bn3(x)
         x = self.fc2(F.relu(x))
         return x
@@ -59,7 +59,7 @@ def main(train_args):
     # 2. 定义好model
     args = {**train_args, **hyperparameters}
     model = LSTM(args['input_size'], args['hidden_size'], args['gesture_num'])
-    optimizer = torch.optim.Adam(model.parameters(), lr=args['lr'], weight_decay=0.01)
+    optimizer = torch.optim.Adam(model.parameters())
 
     manager = Manager(args, model, default_capg_loaders)
     manager.compile(optimizer)
@@ -84,3 +84,6 @@ if __name__ == "__main__":
     }
 
     main(test_args)
+    # print(torch.cuda.is_available())
+    # print(torch.cuda.device_count())
+    # print(torch.cuda.get_device_name(0))

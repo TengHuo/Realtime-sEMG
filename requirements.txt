@@ -1,5 +1,5 @@
 h5py==2.9.0
-matplotlib==3.0.3
+matplotlib
 numpy
 pandas==0.24.2
 Pillow==6.0.0
@@ -9,6 +9,7 @@ six==1.12.0
 torch
 torchvision
 tqdm==4.31.1
-ignite==0.2.0
+pytorch-ignite
 click
 tensorflow
+tensorboardx==1.6

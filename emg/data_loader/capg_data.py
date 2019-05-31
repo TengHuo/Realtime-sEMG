@@ -26,6 +26,7 @@ def default_capg_loaders(model_args: dict):
                                           TEST=model_args['test'],
                                           train=True),
                               batch_size=model_args['train_batch_size'],
+                              num_workers=4,
                               shuffle=True)
 
     val_loader = DataLoader(CapgDataset(gesture=model_args['gesture_num'],
@@ -35,6 +36,7 @@ def default_capg_loaders(model_args: dict):
                                         TEST=model_args['test'],
                                         train=False),
                             batch_size=model_args['val_batch_size'],
+                            num_workers=4,
                             shuffle=False)
 
     return train_loader, val_loader

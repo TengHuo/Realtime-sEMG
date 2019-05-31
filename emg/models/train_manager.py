@@ -65,7 +65,7 @@ class Manager(object):
                 if 'weight_ih' in name:
                     torch.nn.init.xavier_uniform_(param.data)
                 elif 'weight_hh' in name:
-                    torch.nn.init.orthogonal_(param.data)
+                    torch.nn.init.xavier_uniform_(param.data)
                 elif 'bias' in name:
                     param.data.fill_(0)
         elif isinstance(m, nn.Conv2d):
@@ -122,9 +122,9 @@ class Manager(object):
         trainer.add_event_handler(Events.EPOCH_COMPLETED, handler, {self.args['gesture_num']: self.model})
 
         # add a learning rate scheduler
-        step_scheduler = StepLR(optimizer, step_size=self.args['lr_step'], gamma=0.1)
-        scheduler = LRScheduler(step_scheduler, save_history=True)
-        trainer.add_event_handler(Events.EPOCH_COMPLETED, scheduler)
+        # step_scheduler = StepLR(optimizer, step_size=self.args['lr_step'], gamma=0.1)
+        # scheduler = LRScheduler(step_scheduler, save_history=True)
+        # trainer.add_event_handler(Events.EPOCH_COMPLETED, scheduler)
 
         # add early stop handler, if val loss has not improved for patience validation epochs,
         # training will stop
@@ -158,9 +158,17 @@ class Manager(object):
         self.__tb_logger.attach(trainer, event_name=Events.ITERATION_COMPLETED,
                                 log_handler=WeightsScalarHandler(self.model))
 
+        # Attach the logger to the trainer to log model's weights as a histogram after each epoch
+        self.__tb_logger.attach(trainer, event_name=Events.EPOCH_STARTED,
+                                log_handler=WeightsHistHandler(self.model))
+
         # # Attach the logger to the trainer to log model's gradients norm after each iteration
         self.__tb_logger.attach(trainer, event_name=Events.ITERATION_COMPLETED,
                                 log_handler=GradsScalarHandler(self.model))
+
+        # Attach the logger to the trainer to log model's gradients as a histogram after each epoch
+        self.__tb_logger.attach(trainer, event_name=Events.EPOCH_COMPLETED,
+                                log_handler=GradsHistHandler(self.model))
 
     def summary(self):
         print(self.model_summary)
