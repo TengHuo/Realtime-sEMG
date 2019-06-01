@@ -16,7 +16,10 @@ from torchvision import datasets, transforms
 from torch.utils.data import DataLoader
 import torch.nn.functional as F
 
-from emg.models.train_manager import Manager
+from torch.utils.tensorboard import SummaryWriter
+
+from emg.models.base import EMGClassifier
+from emg.utils import TensorboardCallback, generate_folder
 
 
 hyperparameters = {
@@ -27,13 +30,13 @@ hyperparameters = {
 
 
 class Net(nn.Module):
-    def __init__(self, gesture_num: int):
+    def __init__(self):
         super(Net, self).__init__()
         self.conv1 = nn.Conv2d(1, 20, 3, stride=1, padding=1)
         self.conv2 = nn.Conv2d(20, 50, 3, stride=1, padding=1)
         self.conv1.weight.data.normal_()
         self.fc1 = nn.Linear(2450, 500)
-        self.fc2 = nn.Linear(500, gesture_num)
+        self.fc2 = nn.Linear(500, 10)
 
     def forward(self, x):
         x = F.relu(self.conv1(x))
@@ -77,15 +80,37 @@ def main(train_args):
     # 1. 设置好optimizer
     # 2. 定义好model
     args = {**train_args, **hyperparameters}
-    model = Net(args['gesture_num'])
-    optimizer = torch.optim.SGD(model.parameters(), lr=args['lr'], momentum=0.9, weight_decay=0.01)
 
-    manager = Manager(args, model, mnist_loader)
-    manager.compile(optimizer)
-    manager.summary()
-    manager.start_train()
-    # manager.test()  # TODO
-    manager.finish()
+    train_set = datasets.MNIST(root='../../data/',
+                               transform=transform_fun,
+                               train=True,
+                               download=True)
+
+    x = train_set.data
+    x = x.view(x.size(0), 1, 28, 28)
+    x = x.to(torch.float32)
+    y = train_set.targets
+
+    model = Net()
+    f_name = args['model'] + '-' + str(args['gesture_num']) + '-test'
+
+    tb_dir = generate_folder(root_folder='tensorboard', folder_name=f_name, sub_folder='3fc-2bn')
+    writer = SummaryWriter(tb_dir)
+    dummpy_input = torch.ones((1, 1, 28, 28), dtype=torch.float, requires_grad=True)
+    writer.add_graph(model, input_to_model=dummpy_input)
+
+    tensorboard_cb = TensorboardCallback(writer)
+    net = EMGClassifier(module=model, model_name=f_name,
+                        hyperparamters=args,
+                        lr=args['lr'],
+                        batch_size=args['train_batch_size'],
+                        continue_train=False,
+                        stop_patience=args['stop_patience'],
+                        max_epochs=args['epoch'],
+                        optimizer=torch.optim.Adam,
+                        callbacks=[tensorboard_cb])
+
+    net.fit(x, y)
 
 
 if __name__ == "__main__":
@@ -94,10 +119,10 @@ if __name__ == "__main__":
         'gesture_num': 10,
         'lr': 0.001,
         'lr_step': 5,
-        'epoch': 10,
-        'train_batch_size': 256,
+        'epoch': 30,
+        'train_batch_size': 128,
         'val_batch_size': 1024,
-        'stop_patience': 5,
+        'stop_patience': 8,
         'log_interval': 100,
         'test': True
     }

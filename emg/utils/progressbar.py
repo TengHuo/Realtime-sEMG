@@ -73,7 +73,7 @@ class ProgressBar(Callback):
         postfix = {'Epoch': epoch_step}
         for key in self.postfix_keys:
             try:
-                postfix[key] = net.history[-1, 'batches', -1, key]
+                postfix[key] = '{:^7.3f}'.format(net.history[-1, 'batches', -1, key])
             except KeyError:
                 pass
         return postfix
