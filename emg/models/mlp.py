@@ -73,6 +73,7 @@ def main(train_args):
 
     tensorboard_cb = TensorboardCallback(writer)
     net = EMGClassifier(module=model, model_name=name,
+                        hyperparamters=args,
                         lr=args['lr'],
                         batch_size=args['train_batch_size'],
                         continue_train=False,

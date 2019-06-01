@@ -18,7 +18,6 @@ from emg.utils import init_parameters, generate_folder, ReportLog, ProgressBar
 
 from skorch import NeuralNet
 from skorch.callbacks import EpochTimer
-from skorch.callbacks import PrintLog
 from skorch.callbacks import EpochScoring
 from skorch.callbacks import BatchScoring
 from skorch.dataset import CVSplit
@@ -33,18 +32,17 @@ from skorch.callbacks import Checkpoint, TrainEndCheckpoint, EarlyStopping
 
 
 class EMGClassifier(NeuralNet):
-    def __init__(self, module, model_name, *args,
-                 continue_train=False,
-                 stop_patience=7,
-                 criterion=nn.CrossEntropyLoss,
-                 train_split=CVSplit(10, stratified=True),
-                 **kwargs):
+    def __init__(self, module: nn.Module, model_name: str, hyperparamters: dict, *args,
+                 continue_train=False, stop_patience=7, criterion=nn.CrossEntropyLoss,
+                 train_split=CVSplit(10, stratified=True), **kwargs):
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         super(EMGClassifier, self).__init__(module, *args,
                                             device=device,
                                             criterion=criterion,
                                             train_split=train_split,
                                             **kwargs)
+        self.hyperparamters = hyperparamters
+        self.model_name = model_name
         self.patience = stop_patience
         self.model_path = generate_folder('checkpoints', model_name)
 
@@ -87,7 +85,7 @@ class EMGClassifier(NeuralNet):
             ('earlystop',  EarlyStopping(
                 patience=self.patience,
                 threshold=1e-4)),
-            # ('report', ReportLog()),
+            ('report', ReportLog()),
             ('progressbar', ProgressBar())
         ]
 
