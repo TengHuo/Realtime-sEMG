@@ -159,7 +159,7 @@ class Manager(object):
                                 log_handler=WeightsScalarHandler(self.model))
 
         # Attach the logger to the trainer to log model's weights as a histogram after each epoch
-        self.__tb_logger.attach(trainer, event_name=Events.EPOCH_STARTED,
+        self.__tb_logger.attach(trainer, event_name=Events.EPOCH_COMPLETED,
                                 log_handler=WeightsHistHandler(self.model))
 
         # # Attach the logger to the trainer to log model's gradients norm after each iteration

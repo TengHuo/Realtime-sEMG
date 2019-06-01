@@ -3,9 +3,8 @@
 .env
 data/
 cache/
-outputs/
+tensorboard/
 checkpoints/
-config_default.py
 
 # Created by https://www.gitignore.io/api/macos,python,pycharm,jupyternotebook,visualstudiocode
 # Edit at https://www.gitignore.io/?templates=macos,python,pycharm,jupyternotebook,visualstudiocode
