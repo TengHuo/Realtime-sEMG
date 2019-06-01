@@ -51,7 +51,7 @@ class ReportLog(Callback):
     """
     def __init__(self, sink=print):
         self.sink = sink
-        self.__log_report = ''
+        self.__log_report = []
         self.__start_time = ''
 
     def _sink(self, text, verbose):
@@ -62,7 +62,7 @@ class ReportLog(Callback):
                        X=None, y=None, **kwargs):
         """Called at the beginning of training."""
         # generate a new report
-        self.__log_report = ''
+        self.__log_report = []
         self.__start_time = datetime.now().strftime('%m-%d-%H-%M-%S')
 
     def on_train_end(self, net, X=None, y=None, **kwargs):
@@ -87,9 +87,10 @@ class ReportLog(Callback):
             history_batch = history[epoch, 'batches']
             for batch_info in history_batch:
                 batch_step += 1
-                if 'train_loss' in batch_info:
+                if 'train_loss' in batch_info and \
+                        batch_step % net.hyperparamters['log_interval'] == 1:
                     train_history.append([batch_step, batch_info['train_loss']])
-                else:
+                elif 'valid_loss' in batch_info:
                     valid_history.append([batch_step, batch_info['valid_loss'], history[epoch, 'valid_acc']])
         train_history = np.array(train_history)
         valid_history = np.array(valid_history)
@@ -103,7 +104,7 @@ class ReportLog(Callback):
         val_acc = data['valid_acc']
         log = 'Epoch {}, Train loss: {:.2f} - Valid loss: {:.2f} - Valid accuracy: {:.2f}' \
               .format(data['epoch'], train_loss, val_loss, val_acc)
-        self.__log_report += log
+        self.__log_report.append(log)
         print()
         self._sink(log, net.verbose)
         sys.stdout.flush()

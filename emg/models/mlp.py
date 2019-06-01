@@ -12,9 +12,9 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from torch.utils.tensorboard import SummaryWriter
 
 from emg.models.base import EMGClassifier
-from torch.utils.tensorboard import SummaryWriter
 from emg.utils import TensorboardCallback, generate_folder
 from emg.data_loader.capg_data import CapgDataset
 
@@ -64,15 +64,15 @@ def main(train_args):
     y = train_set.targets
 
     model = MLP(args['input_size'], args['hidden_size'], args['gesture_num'])
-    name = args['model'] + '-' + str(args['gesture_num']) + '-test'
+    f_name = args['model'] + '-' + str(args['gesture_num']) + '-testearlystop'
 
-    tb_dir = generate_folder(root_folder='tensorboard', folder_name=name, sub_folder='3fc-2bn')
+    tb_dir = generate_folder(root_folder='tensorboard', folder_name=f_name, sub_folder='3fc-2bn')
     writer = SummaryWriter(tb_dir)
     dummpy_input = torch.ones((1, 128), dtype=torch.float, requires_grad=True)
     writer.add_graph(model, input_to_model=dummpy_input)
 
     tensorboard_cb = TensorboardCallback(writer)
-    net = EMGClassifier(module=model, model_name=name,
+    net = EMGClassifier(module=model, model_name=f_name,
                         hyperparamters=args,
                         lr=args['lr'],
                         batch_size=args['train_batch_size'],

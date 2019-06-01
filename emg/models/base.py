@@ -14,21 +14,15 @@ import numpy as np
 import torch
 from torch import nn
 from torch.utils.data import DataLoader
-from emg.utils import init_parameters, generate_folder, ReportLog, ProgressBar
 
 from skorch import NeuralNet
-from skorch.callbacks import EpochTimer
-from skorch.callbacks import EpochScoring
-from skorch.callbacks import BatchScoring
-from skorch.dataset import CVSplit
-from skorch.utils import get_dim
-from skorch.utils import is_dataset
-from skorch.utils import noop
-from skorch.utils import to_numpy
-from skorch.utils import train_loss_score
-from skorch.utils import valid_loss_score
-
+from skorch.callbacks import EpochTimer, EpochScoring, BatchScoring
 from skorch.callbacks import Checkpoint, TrainEndCheckpoint, EarlyStopping
+from skorch.dataset import CVSplit
+from skorch.utils import is_dataset, noop, to_numpy
+from skorch.utils import train_loss_score, valid_loss_score
+
+from emg.utils import init_parameters, generate_folder, ReportLog, ProgressBar
 
 
 class EMGClassifier(NeuralNet):
