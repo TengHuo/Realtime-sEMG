@@ -14,7 +14,7 @@ import torch.nn.functional as F
 from torch.utils.tensorboard import SummaryWriter
 
 from emg.models.base import EMGClassifier
-from emg.utils import TensorboardCallback, generate_folder
+from emg.utils import TensorboardCallback, generate_folder, init_parameters
 from emg.data_loader.capg_data import CapgDataset
 
 
@@ -68,12 +68,35 @@ def main(train_args):
                             TEST=args['test'],
                             train=True)
 
+    test_set = CapgDataset(gesture=args['gesture_num'],
+                            sequence_len=10,
+                            sequence_result=False,
+                            frame_x=args['frame_input'],
+                            TEST=args['test'],
+                            train=True)
+
     x = train_set.data
     y = train_set.targets
 
+    import numpy as np
+
+    shuffle_idx = np.arange(start=0, stop=x.shape[0])
+    np.random.shuffle(shuffle_idx)
+    x = x[shuffle_idx]
+    y = y[shuffle_idx]
+
+    x_test = test_set.data
+    y_test = test_set.targets
+    shuffle_idx = np.arange(start=0, stop=x_test.shape[0])
+    np.random.shuffle(shuffle_idx)
+    x_test = x_test[shuffle_idx]
+    y_test = y_test[shuffle_idx]
+
     model = LSTM(args['input_size'], args['hidden_size'], args['gesture_num'])
-    comment = 'test4'
-    f_name = args['model'] + '-' + str(args['gesture_num']) + '-{}'.format(comment)
+    # model.load_state_dict(torch.load('/home/teng/Code/Realtime-sEMG/checkpoints/lstm_8_30.pth'))
+    model.apply(init_parameters)
+    # comment = 'test4'
+    # f_name = args['model'] + '-' + str(args['gesture_num']) + '-{}'.format(comment)
 
     # tb_dir = generate_folder(root_folder='tensorboard', folder_name=f_name, sub_folder=comment)
     # writer = SummaryWriter(tb_dir)
@@ -82,18 +105,25 @@ def main(train_args):
 
     # tensorboard_cb = TensorboardCallback(writer)
 
-    from skorch import NeuralNetClassifier
+    from emg.models.test import NeuralNetClassifier
+    # from skorch import NeuralNetClassifier
+    from skorch.dataset import CVSplit
 
-    net = NeuralNetClassifier(module=LSTM,
+    net = NeuralNetClassifier(module=model,
                               criterion=nn.CrossEntropyLoss,
-                              optimizer=torch.optim.Adam,
-                              lr=args['lr'],
+                              optimizer=torch.optim.Adam(model.parameters()),
+                              # optimizer=torch.optim.Adam,
                               max_epochs=args['epoch'],
-                              device='cuda',
+                              batch_size=256,
+                              # lr=0.001,
+                              device=torch.device("cuda" if torch.cuda.is_available() else "cpu"),
                               # model_name=f_name,
-                              module__input_size=args['input_size'],
-                              module__hidden_size=args['hidden_size'],
-                              module__output_size=args['gesture_num'])
+                              iterator_train__shuffle=True,
+                              iterator_valid__shuffle=False,
+                              train_split=CVSplit(0.1))
+                              # module__input_size=args['input_size'],
+                              # module__hidden_size=args['hidden_size'],
+                              # module__output_size=args['gesture_num'])
                               # hyperparamters=args,
                               # lr=args['lr'],
                               # batch_size=args['train_batch_size'],
@@ -103,14 +133,16 @@ def main(train_args):
                               # optimizer=torch.optim.Adam)
                               # callbacks=[tensorboard_cb])
 
-    net.fit(x, y)
+    net.myfit(X=x, y=y, test_x=x_test, test_y=y_test)
+    # net.fit(X=x, y=y)
+
 
 
 if __name__ == "__main__":
     test_args = {
         'model': 'lstm',
         'gesture_num': 8,
-        'lr': 0.0001,
+        'lr': 0.001,
         'lr_step': 5,
         'epoch': 30,
         'train_batch_size': 256,

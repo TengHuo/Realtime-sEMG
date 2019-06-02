@@ -6,7 +6,7 @@ import numpy as np
 import torch
 from torch.utils.data import DataLoader
 
-from skorch import NeuralNet
+from emg.models.neural_net import NeuralNet
 from skorch.callbacks import EpochTimer
 from skorch.callbacks import PrintLog
 from skorch.callbacks import EpochScoring
@@ -106,7 +106,7 @@ class NeuralNetClassifier(NeuralNet):
         return super().get_loss(y_pred, y_true, *args, **kwargs)
 
     # pylint: disable=signature-differs
-    def fit(self, X, y, **fit_params):
+    def myfit(self, X, y, test_x, test_y):
         """See ``NeuralNet.fit``.
 
         In contrast to ``NeuralNet.fit``, ``y`` is non-optional to
@@ -118,7 +118,7 @@ class NeuralNetClassifier(NeuralNet):
         # pylint: disable=useless-super-delegation
         # this is actually a pylint bug:
         # https://github.com/PyCQA/pylint/issues/1085
-        return super(NeuralNetClassifier, self).fit(X, y, **fit_params)
+        return super(NeuralNetClassifier, self).fit(X, y, test_x, test_y)
 
     def predict_proba(self, X):
         """Where applicable, return probability estimates for

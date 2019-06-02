@@ -525,7 +525,7 @@ class NeuralNet:
         if 'lr' not in kwargs:
             kwargs['lr'] = self.lr
 
-        self.optimizer_ = self.optimizer(*args, **kwargs)
+        self.optimizer_ = self.optimizer#(*args, **kwargs)
 
         self._register_virtual_param(
             ['optimizer__param_groups__*__*', 'optimizer__*', 'lr'],
@@ -607,7 +607,7 @@ class NeuralNet:
         y_pred = self.infer(Xi, **fit_params)
         loss = self.get_loss(y_pred, yi, X=Xi, training=True)
         loss.backward()
-
+        self.optimizer_.step()
         self.notify(
             'on_grad_computed',
             named_parameters=TeeGenerator(self.module_.named_parameters()),
@@ -620,21 +620,21 @@ class NeuralNet:
             'y_pred': y_pred,
             }
 
-    def get_train_step_accumulator(self):
-        """Return the train step accumulator.
-
-        By default, the accumulator stores and retrieves the first
-        value from the optimizer call. Most optimizers make only one
-        call, so first value is at the same time the only value.
-
-        In case of some optimizers, e.g. LBFGS,
-        ``train_step_calc_gradient`` is called multiple times, as the
-        loss function is evaluated multiple times per optimizer
-        call. If you don't want to return the first value in that
-        case, override this method to return your custom accumulator.
-
-        """
-        return FirstStepAccumulator()
+    # def get_train_step_accumulator(self):
+    #     """Return the train step accumulator.
+    #
+    #     By default, the accumulator stores and retrieves the first
+    #     value from the optimizer call. Most optimizers make only one
+    #     call, so first value is at the same time the only value.
+    #
+    #     In case of some optimizers, e.g. LBFGS,
+    #     ``train_step_calc_gradient`` is called multiple times, as the
+    #     loss function is evaluated multiple times per optimizer
+    #     call. If you don't want to return the first value in that
+    #     case, override this method to return your custom accumulator.
+    #
+    #     """
+    #     return FirstStepAccumulator()
 
     def train_step(self, Xi, yi, **fit_params):
         """Prepares a loss function callable and pass it to the optimizer,
@@ -660,13 +660,14 @@ class NeuralNet:
           the module and to the train_split call.
 
         """
-        step_accumulator = self.get_train_step_accumulator()
-        def step_fn():
-            step = self.train_step_single(Xi, yi, **fit_params)
-            step_accumulator.store_step(step)
-            return step['loss']
-        self.optimizer_.step(step_fn)
-        return step_accumulator.get_step()
+        # step_accumulator = self.get_train_step_accumulator()
+        # def step_fn():
+        #     step = self.train_step_single(Xi, yi, **fit_params)
+        #     step_accumulator.store_step(step)
+        #     return step['loss']
+        # self.optimizer_.step(step_fn)
+        # return step_accumulator.get_step()
+        return self.train_step_single(Xi, yi, **fit_params)
 
     def evaluation_step(self, Xi, training=False):
         """Perform a forward step to produce the output used for
@@ -681,7 +682,7 @@ class NeuralNet:
             self.module_.train(training)
             return self.infer(Xi)
 
-    def fit_loop(self, X, y=None, epochs=None, **fit_params):
+    def fit_loop(self, X, y, test_x, test_y, epochs=None, **fit_params):
         """The proper fit loop.
 
         Contains the logic of what actually happens during the fit
@@ -720,8 +721,12 @@ class NeuralNet:
         self.check_data(X, y)
         epochs = epochs if epochs is not None else self.max_epochs
 
-        dataset_train, dataset_valid = self.get_split_datasets(
-            X, y, **fit_params)
+        # dataset_train, dataset_valid = self.get_split_datasets(
+        #     X, y, **fit_params)
+
+        dataset_train = self.get_dataset(X, y)
+        dataset_valid = self.get_dataset(test_x, test_y)
+
         on_epoch_kwargs = {
             'dataset_train': dataset_train,
             'dataset_valid': dataset_valid,
@@ -729,7 +734,7 @@ class NeuralNet:
 
         y_train_is_ph = uses_placeholder_y(dataset_train)
         y_valid_is_ph = uses_placeholder_y(dataset_valid)
-
+        print('start train!!!!!!!!!!')
         for _ in range(epochs):
             self.notify('on_epoch_begin', **on_epoch_kwargs)
 
@@ -757,7 +762,7 @@ class NeuralNet:
         return self
 
     # pylint: disable=unused-argument
-    def partial_fit(self, X, y=None, classes=None, **fit_params):
+    def partial_fit(self, X, y, test_x, test_y, classes=None, **fit_params):
         """Fit the module.
 
         If the module is initialized, it is not re-initialized, which
@@ -798,13 +803,13 @@ class NeuralNet:
 
         self.notify('on_train_begin', X=X, y=y)
         try:
-            self.fit_loop(X, y, **fit_params)
+            self.fit_loop(X, y, test_x, test_y)
         except KeyboardInterrupt:
             pass
         self.notify('on_train_end', X=X, y=y)
         return self
 
-    def fit(self, X, y=None, **fit_params):
+    def fit(self, X, y, test_x, test_y):
         """Initialize and fit the module.
 
         If the module was already initialized, by calling fit, the
@@ -839,7 +844,7 @@ class NeuralNet:
         if not self.warm_start or not self.initialized_:
             self.initialize()
 
-        self.partial_fit(X, y, **fit_params)
+        self.partial_fit(X, y, test_x, test_y)
         return self
 
     def forward_iter(self, X, training=False, device='cpu'):

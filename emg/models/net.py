@@ -87,8 +87,9 @@ def main(train_args):
                                download=True)
 
     x = train_set.data
-    x = x.view(x.size(0), 1, 28, 28)
     x = x.to(torch.float32)
+    x /= 255.0
+    x = x.view(x.size(0), 1, 28, 28)
     y = train_set.targets
 
     # model = Net()
@@ -111,16 +112,18 @@ def main(train_args):
     #                     callbacks=[tensorboard_cb])
 
     from emg.models.test import NeuralNetClassifier
-    model = Net()
-    model.apply(init_parameters)
+    # model = Net()
+    # model.apply(init_parameters)
 
-    net = NeuralNetClassifier(module=model,
+    from skorch.dataset import CVSplit
+
+    net = NeuralNetClassifier(module=Net,
                               criterion=nn.CrossEntropyLoss,
                               optimizer=torch.optim.Adam,
-                              lr=args['lr'],
+                              train_split=CVSplit(10),
                               max_epochs=args['epoch'],
                               device='cuda')
-
+    print('start train')
     net.fit(x, y)
 
 
