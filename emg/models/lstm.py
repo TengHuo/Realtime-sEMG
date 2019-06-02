@@ -73,7 +73,7 @@ def main(train_args):
                             sequence_result=False,
                             frame_x=args['frame_input'],
                             TEST=args['test'],
-                            train=True)
+                            train=False)
 
     x = train_set.data
     y = train_set.targets
@@ -105,22 +105,23 @@ def main(train_args):
 
     # tensorboard_cb = TensorboardCallback(writer)
 
-    from emg.models.test import NeuralNetClassifier
-    # from skorch import NeuralNetClassifier
+    # from emg.models.test import NeuralNetClassifier
+    # from emg.models.cv import CVSplit
+    from skorch import NeuralNetClassifier
     from skorch.dataset import CVSplit
 
     net = NeuralNetClassifier(module=model,
                               criterion=nn.CrossEntropyLoss,
-                              optimizer=torch.optim.Adam(model.parameters()),
-                              # optimizer=torch.optim.Adam,
+                              # optimizer=torch.optim.Adam(model.parameters()),
+                              optimizer=torch.optim.Adam,
                               max_epochs=args['epoch'],
                               batch_size=256,
-                              # lr=0.001,
+                              lr=0.001,
                               device=torch.device("cuda" if torch.cuda.is_available() else "cpu"),
                               # model_name=f_name,
                               iterator_train__shuffle=True,
                               iterator_valid__shuffle=False,
-                              train_split=CVSplit(0.1))
+                              train_split=CVSplit(cv=0.1))
                               # module__input_size=args['input_size'],
                               # module__hidden_size=args['hidden_size'],
                               # module__output_size=args['gesture_num'])
@@ -133,9 +134,8 @@ def main(train_args):
                               # optimizer=torch.optim.Adam)
                               # callbacks=[tensorboard_cb])
 
-    net.myfit(X=x, y=y, test_x=x_test, test_y=y_test)
-    # net.fit(X=x, y=y)
-
+    # net.myfit(X=x, y=y, test_x=x_test, test_y=y_test)
+    net.fit(X=x, y=y)
 
 
 if __name__ == "__main__":
