@@ -51,9 +51,9 @@ class EMGClassifier(NeuralNet):
                                  f_history=history)
             else:
                 raise FileNotFoundError()
-        else:
-            print('build a new model, init parameters of {}'.format(model_name))
-            self.module.apply(init_parameters)
+        # else:
+        #     print('build a new model, init parameters of {}'.format(model_name))
+        #     self.module.apply(init_parameters)
 
     @property
     def _default_callbacks(self):
@@ -76,9 +76,9 @@ class EMGClassifier(NeuralNet):
                 dirname=self.model_path)),
             ('end_checkpoint', TrainEndCheckpoint(
                 dirname=self.model_path)),
-            ('earlystop',  EarlyStopping(
-                patience=self.patience,
-                threshold=1e-4)),
+            # ('earlystop',  EarlyStopping(
+            #     patience=self.patience,
+            #     threshold=1e-4)),
             ('report', ReportLog()),
             ('progressbar', ProgressBar())
         ]

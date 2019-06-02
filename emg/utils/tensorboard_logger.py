@@ -70,6 +70,10 @@ class TensorboardCallback(Callback):
         self.writer.add_scalar("validation/accuracy",
                                scalar_value=valid_acc,
                                global_step=self.epoch_step)
+        valid_loss = net.history[-1, 'valid_loss']
+        self.writer.add_scalar("validation/loss",
+                               scalar_value=valid_loss,
+                               global_step=self.epoch_step)
 
         for name, p in net.module_.named_parameters():
             name = name.replace('.', '/')
@@ -93,10 +97,6 @@ class TensorboardCallback(Callback):
         if training:
             self.writer.add_scalar("training/loss",
                                    scalar_value=batch_info['train_loss'],
-                                   global_step=self.batch_step)
-        else:
-            self.writer.add_scalar("validation/loss",
-                                   scalar_value=batch_info['valid_loss'],
                                    global_step=self.batch_step)
 
     def on_grad_computed(self, net: NeuralNet, named_parameters,

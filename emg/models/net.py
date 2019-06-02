@@ -19,7 +19,7 @@ import torch.nn.functional as F
 from torch.utils.tensorboard import SummaryWriter
 
 from emg.models.base import EMGClassifier
-from emg.utils import TensorboardCallback, generate_folder
+from emg.utils import TensorboardCallback, generate_folder, init_parameters
 
 
 hyperparameters = {
@@ -91,24 +91,35 @@ def main(train_args):
     x = x.to(torch.float32)
     y = train_set.targets
 
+    # model = Net()
+    # f_name = args['model'] + '-' + str(args['gesture_num']) + '-no_init'
+
+    # tb_dir = generate_folder(root_folder='tensorboard', folder_name=f_name, sub_folder='3fc-2bn')
+    # writer = SummaryWriter(tb_dir)
+    # dummpy_input = torch.ones((1, 1, 28, 28), dtype=torch.float, requires_grad=True)
+    # writer.add_graph(model, input_to_model=dummpy_input)
+
+    # tensorboard_cb = TensorboardCallback(writer)
+    # net = EMGClassifier(module=model, model_name=f_name,
+    #                     hyperparamters=args,
+    #                     lr=args['lr'],
+    #                     batch_size=args['train_batch_size'],
+    #                     continue_train=False,
+    #                     stop_patience=args['stop_patience'],
+    #                     max_epochs=args['epoch'],
+    #                     optimizer=torch.optim.Adam,
+    #                     callbacks=[tensorboard_cb])
+
+    from emg.models.test import NeuralNetClassifier
     model = Net()
-    f_name = args['model'] + '-' + str(args['gesture_num']) + '-test'
+    model.apply(init_parameters)
 
-    tb_dir = generate_folder(root_folder='tensorboard', folder_name=f_name, sub_folder='3fc-2bn')
-    writer = SummaryWriter(tb_dir)
-    dummpy_input = torch.ones((1, 1, 28, 28), dtype=torch.float, requires_grad=True)
-    writer.add_graph(model, input_to_model=dummpy_input)
-
-    tensorboard_cb = TensorboardCallback(writer)
-    net = EMGClassifier(module=model, model_name=f_name,
-                        hyperparamters=args,
-                        lr=args['lr'],
-                        batch_size=args['train_batch_size'],
-                        continue_train=False,
-                        stop_patience=args['stop_patience'],
-                        max_epochs=args['epoch'],
-                        optimizer=torch.optim.Adam,
-                        callbacks=[tensorboard_cb])
+    net = NeuralNetClassifier(module=model,
+                              criterion=nn.CrossEntropyLoss,
+                              optimizer=torch.optim.Adam,
+                              lr=args['lr'],
+                              max_epochs=args['epoch'],
+                              device='cuda')
 
     net.fit(x, y)
 
