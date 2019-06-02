@@ -193,7 +193,7 @@ def _save_capg_to_h5(train_data, test_data, file_name):
 
         test_grp = data_file.create_group('test')
         for gesture in test_data.keys():
-            test_grp.create_dataset(str(gesture), data=train_data[gesture], dtype=float)
+            test_grp.create_dataset(str(gesture), data=test_data[gesture], dtype=float)
 
 
 def _load_capg_data(db_name):
