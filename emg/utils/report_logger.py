@@ -89,11 +89,8 @@ class ReportLog(Callback):
                 batch_step += 1
                 if 'train_loss' in batch_info and \
                         batch_step % net.hyperparamters['log_interval'] == 1:
-                    loss = batch_info['train_loss']
-                    # if loss < 10:
                     train_history.append([batch_step, batch_info['train_loss']])
-                elif 'valid_loss' in batch_info:
-                    valid_history.append([batch_step, batch_info['valid_loss'], history[epoch, 'valid_acc']])
+            valid_history.append([batch_step, history[epoch, 'valid_loss'], history[epoch, 'valid_acc']])
         train_history = np.array(train_history)
         valid_history = np.array(valid_history)
         history_fig_path = os.path.join(net.model_path, 'history.png')

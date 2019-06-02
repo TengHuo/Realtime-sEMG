@@ -65,7 +65,7 @@ class ProgressBar(Callback):
     def __init__(self, batches_per_epoch='auto', detect_notebook=True, postfix_keys=None):
         self.batches_per_epoch = batches_per_epoch
         self.detect_notebook = detect_notebook
-        self.postfix_keys = postfix_keys or ['train_loss', 'valid_loss']
+        self.postfix_keys = postfix_keys or ['train_loss']
         self.pbar = None
         self.epoch_step = 0
 

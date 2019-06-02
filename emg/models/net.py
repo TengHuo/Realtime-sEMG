@@ -19,7 +19,7 @@ import torch.nn.functional as F
 from torch.utils.tensorboard import SummaryWriter
 
 from emg.models.base import EMGClassifier
-from emg.utils import TensorboardCallback, generate_folder, init_parameters
+from emg.utils import TensorboardCallback, generate_folder
 
 
 hyperparameters = {
@@ -92,37 +92,26 @@ def main(train_args):
     x = x.view(x.size(0), 1, 28, 28)
     y = train_set.targets
 
-    # model = Net()
-    # f_name = args['model'] + '-' + str(args['gesture_num']) + '-no_init'
+    model = Net()
+    f_name = args['model'] + '-' + str(args['gesture_num']) + '-no_init'
 
-    # tb_dir = generate_folder(root_folder='tensorboard', folder_name=f_name, sub_folder='3fc-2bn')
-    # writer = SummaryWriter(tb_dir)
-    # dummpy_input = torch.ones((1, 1, 28, 28), dtype=torch.float, requires_grad=True)
-    # writer.add_graph(model, input_to_model=dummpy_input)
+    tb_dir = generate_folder(root_folder='tensorboard', folder_name=f_name, sub_folder='3fc-2bn')
+    writer = SummaryWriter(tb_dir)
+    dummpy_input = torch.ones((1, 1, 28, 28), dtype=torch.float, requires_grad=True)
+    writer.add_graph(model, input_to_model=dummpy_input)
+    tensorboard_cb = TensorboardCallback(writer)
 
-    # tensorboard_cb = TensorboardCallback(writer)
-    # net = EMGClassifier(module=model, model_name=f_name,
-    #                     hyperparamters=args,
-    #                     lr=args['lr'],
-    #                     batch_size=args['train_batch_size'],
-    #                     continue_train=False,
-    #                     stop_patience=args['stop_patience'],
-    #                     max_epochs=args['epoch'],
-    #                     optimizer=torch.optim.Adam,
-    #                     callbacks=[tensorboard_cb])
-
-    from emg.models.test import NeuralNetClassifier
-    # model = Net()
-    # model.apply(init_parameters)
-
-    from skorch.dataset import CVSplit
-
-    net = NeuralNetClassifier(module=Net,
-                              criterion=nn.CrossEntropyLoss,
-                              optimizer=torch.optim.Adam,
-                              train_split=CVSplit(10),
-                              max_epochs=args['epoch'],
-                              device='cuda')
+    net = EMGClassifier(module=model,
+                        model_name=f_name,
+                        hyperparamters=args,
+                        optimizer=torch.optim.Adam,
+                        max_epochs=args['epoch'],
+                        lr=args['lr'],
+                        iterator_train__shuffle=True,
+                        iterator_train__batch_size=args['train_batch_size'],
+                        iterator_valid__shuffle=False,
+                        iterator_valid__batch_size=args['valid_batch_size'],
+                        callbacks=[tensorboard_cb])
     print('start train')
     net.fit(x, y)
 

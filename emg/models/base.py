@@ -27,8 +27,8 @@ from emg.utils import init_parameters, generate_folder, ReportLog, ProgressBar
 
 class EMGClassifier(NeuralNet):
     def __init__(self, module: nn.Module, model_name: str, hyperparamters: dict, *args,
-                 continue_train=False, stop_patience=7, criterion=nn.CrossEntropyLoss,
-                 train_split=CVSplit(10, stratified=True), **kwargs):
+                 continue_train=False, stop_patience=5, criterion=nn.CrossEntropyLoss,
+                 train_split=CVSplit(cv=0.1), **kwargs):
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         super(EMGClassifier, self).__init__(module, *args,
                                             device=device,
@@ -51,9 +51,9 @@ class EMGClassifier(NeuralNet):
                                  f_history=history)
             else:
                 raise FileNotFoundError()
-        # else:
-        #     print('build a new model, init parameters of {}'.format(model_name))
-        #     self.module.apply(init_parameters)
+        else:
+            print('build a new model, init parameters of {}'.format(model_name))
+            self.module.apply(init_parameters)
 
     @property
     def _default_callbacks(self):
