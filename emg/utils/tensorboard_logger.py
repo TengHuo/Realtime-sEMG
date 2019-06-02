@@ -62,9 +62,11 @@ class TensorboardCallback(Callback):
     def on_epoch_end(self, net: NeuralNet,
                      dataset_train=None, dataset_valid=None, **kwargs):
         """Called at the end of each epoch."""
-        self.writer.add_scalar("lr/learning_rate",
-                               scalar_value=net.lr,
-                               global_step=self.epoch_step)
+        params = net.optimizer_.param_groups
+        for i in range(len(params)):
+            self.writer.add_scalar('learning_rate/lr_{}'.format(i),
+                                   scalar_value=params[i]['lr'],
+                                   global_step=self.epoch_step)
 
         valid_acc = net.history[-1, 'valid_acc']
         self.writer.add_scalar("validation/accuracy",

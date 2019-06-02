@@ -26,8 +26,9 @@ from emg.utils import init_parameters, generate_folder, ReportLog, ProgressBar
 
 
 class EMGClassifier(NeuralNet):
-    def __init__(self, module: nn.Module, model_name: str, hyperparamters: dict, *args,
-                 continue_train=False, stop_patience=5, criterion=nn.CrossEntropyLoss,
+    def __init__(self, module: nn.Module, model_name: str, sub_folder: str,
+                 hyperparamters: dict, *args, stop_patience=5,
+                 continue_train=False, criterion=nn.CrossEntropyLoss,
                  train_split=CVSplit(cv=0.1), **kwargs):
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         super(EMGClassifier, self).__init__(module, *args,
@@ -35,10 +36,10 @@ class EMGClassifier(NeuralNet):
                                             criterion=criterion,
                                             train_split=train_split,
                                             **kwargs)
-        self.hyperparamters = hyperparamters
         self.model_name = model_name
+        self.hyperparamters = hyperparamters
         self.patience = stop_patience
-        self.model_path = generate_folder('checkpoints', model_name)
+        self.model_path = generate_folder('checkpoints', model_name, sub_folder=sub_folder)
 
         if continue_train:
             params = self.model_path + 'train_end_params.pt'

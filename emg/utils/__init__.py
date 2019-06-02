@@ -1,7 +1,6 @@
 from .report_logger import ReportLog
 from .progressbar import ProgressBar
 from .tensorboard_logger import TensorboardCallback
-from .torchsummary import summary
 
 from torch import nn
 import os
@@ -10,7 +9,6 @@ __all__ = [
     'ProgressBar',
     'ReportLog',
     'TensorboardCallback',
-    'summary',
     'init_parameters',
     'generate_folder']
 

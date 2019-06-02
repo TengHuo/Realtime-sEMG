@@ -31,11 +31,12 @@ class LSTM(nn.Module):
     def __init__(self, input_size, hidden_size, output_size):
         super(LSTM, self).__init__()
 
-        self.rnn = nn.GRU(
+        self.rnn = nn.LSTM(
             input_size=input_size[0],
             hidden_size=hidden_size,
             num_layers=3,
             batch_first=True,
+            dropout=0.2,
         )
         # self.bn1 = nn.BatchNorm1d(input_size[0], momentum=0.9)
         # self.bn2 = nn.BatchNorm1d(hidden_size, momentum=0.9)
@@ -53,6 +54,7 @@ class LSTM(nn.Module):
         # x = self.fc1(F.relu(x))
         x = self.bn3(x)
         x = self.fc2(F.relu(x))
+        x = F.dropout(x, p=0.2, training=self.training)
         return x
 
 
@@ -62,18 +64,21 @@ def main(train_args):
     args = {**train_args, **hyperparameters}
 
     model = LSTM(args['input_size'], args['hidden_size'], args['gesture_num'])
-    comment = 'test_bar'
-    f_name = args['model'] + '-' + str(args['gesture_num']) + '-{}'.format(comment)
+    name = args['model'] + '-' + str(args['gesture_num'])
+    sub_folder = 'lstm-dp_0.2-no_lr'
 
-    tb_dir = generate_folder(root_folder='tensorboard', folder_name=f_name, sub_folder=comment)
+    tb_dir = generate_folder(root_folder='tensorboard', folder_name=name,
+                             sub_folder=sub_folder)
     writer = SummaryWriter(tb_dir)
     dummpy_input = torch.ones((1, 10, 128), dtype=torch.float, requires_grad=True)
     writer.add_graph(model, input_to_model=dummpy_input)
-
     tensorboard_cb = TensorboardCallback(writer)
 
-    net = EMGClassifier(module=model,
-                        model_name=f_name,
+    # from emg.utils.lr_scheduler import DecayLR
+    # lr_callback = DecayLR(start_lr=0.001, gamma=0.1, step_size=12)
+
+    net = EMGClassifier(module=model, model_name=name,
+                        sub_folder=sub_folder,
                         hyperparamters=args,
                         optimizer=torch.optim.Adam,
                         max_epochs=args['epoch'],
