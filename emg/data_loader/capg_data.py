@@ -23,7 +23,7 @@ def default_capg_loaders(model_args: dict):
                                           sequence_len=seq_length,
                                           sequence_result=model_args['seq_result'],
                                           frame_x=model_args['frame_input'],
-                                          TEST=model_args['test'],
+                                          test_mode=False,
                                           train=True),
                               batch_size=model_args['train_batch_size'],
                               num_workers=4,
@@ -33,7 +33,7 @@ def default_capg_loaders(model_args: dict):
                                         sequence_len=seq_length,
                                         sequence_result=model_args['seq_result'],
                                         frame_x=model_args['frame_input'],
-                                        TEST=model_args['test'],
+                                        test_mode=False,
                                         train=False),
                             batch_size=model_args['val_batch_size'],
                             num_workers=4,
@@ -51,21 +51,24 @@ class CapgDataset(Dataset):
     """
 
     def __init__(self, gesture=8, sequence_len=1, sequence_result=False,
-                 frame_x=False, train=True, TEST=False, transform=None):
+                 frame_x=False, train=True, test_mode=False, transform=None):
 
         self.transform = transform
         self.train = train  # training set or test set
 
         root_path = os.path.join(os.sep, *os.path.dirname(os.path.realpath(__file__)).split(os.sep)[:-2])
-        data_file_path = os.path.join(root_path, 'cache', 'capg.h5')
-        if not os.path.isfile(data_file_path):
-            print('data not exist, create a new h5 file')
+        processed_data = os.path.join(root_path, 'data', 'capg-processed')
+        train_data_path = os.path.join(processed_data, 'train.h5')
+        test_data_path = os.path.join(processed_data, 'test.h5')
+        if os.path.isfile(train_data_path) and os.path.isfile(test_data_path):
+            print('data exist, load {} data from the file'.format('train' if train else 'test'))
+            train_data, test_data = _load_capg_from_h5(train_data_path, test_data_path)
+        else:
+            print('processed capg data not exist, create new h5 files')
+            os.mkdir(processed_data)
             capg_data = _load_capg_all()
             train_data, test_data = _capg_train_test_split(capg_data, test_size=0.1)
-            _save_capg_to_h5(train_data, test_data, data_file_path)
-        else:
-            print('data exist, load {} data from the file'.format('train' if train else 'test'))
-            train_data, test_data = _load_capg_from_h5(data_file_path)
+            _save_capg_to_h5(train_data, test_data, train_data_path, test_data_path)
 
         if self.train:
             X, y = _prepare_data(train_data, gesture_num=gesture)
@@ -96,8 +99,9 @@ class CapgDataset(Dataset):
 
         y = y.astype(int)
 
-        if TEST:
-            self.data, self.targets = X[:20480], y[:20480]  # for test
+        if test_mode:
+            # for test code, only use small part of data
+            self.data, self.targets = X[:20480], y[:20480]
         else:
             self.data, self.targets = X, y
 
@@ -169,29 +173,31 @@ def _capg_train_test_split(raw_data, test_size=0.1):
     return train_set, test_set
 
 
-def _load_capg_from_h5(file_name):
-    with h5py.File(file_name, 'r') as data_file:
+def _load_capg_from_h5(train_file_path, test_file_path):
+    with h5py.File(train_file_path, 'r') as train_file:
         train_set = dict()
-        train_grp = data_file['train']
+        train_grp = train_file['train']
         print()
         for i in train_grp.keys():
             train_set[int(i)] = train_grp[i][()]
 
+    with h5py.File(test_file_path, 'r') as test_file:
         test_set = dict()
-        test_grp = data_file['test']
+        test_grp = test_file['test']
         for i in test_grp.keys():
             test_set[int(i)] = test_grp[i][()]
 
     return train_set, test_set
 
 
-def _save_capg_to_h5(train_data, test_data, file_name):
-    with h5py.File(file_name, 'w') as data_file:
-        train_grp = data_file.create_group('train')
+def _save_capg_to_h5(train_data, test_data, train_file_path, test_file_path):
+    with h5py.File(train_file_path, 'w') as train_file:
+        train_grp = train_file.create_group('train')
         for gesture in train_data.keys():
             train_grp.create_dataset(str(gesture), data=train_data[gesture], dtype=float)
 
-        test_grp = data_file.create_group('test')
+    with h5py.File(test_file_path, 'w') as test_file:
+        test_grp = test_file.create_group('test')
         for gesture in test_data.keys():
             test_grp.create_dataset(str(gesture), data=test_data[gesture], dtype=float)
 
@@ -227,7 +233,12 @@ def _read_capg_mat_files(path, mat_list):
 
 if __name__ == '__main__':
     # test pytorch data loader
-    test = CapgDataset(gesture=8, sequence_len=10, sequence_result=False,
-                       frame_x=False, train=True, transform=None)
-    print(test.data.shape)
-    print(test.targets.shape)
+    train_data = CapgDataset(gesture=8, sequence_len=10, sequence_result=False,
+                             frame_x=False, train=True, transform=None)
+    print(train_data.data.shape)
+    print(train_data.targets.shape)
+
+    test_data = CapgDataset(gesture=8, sequence_len=10, sequence_result=False,
+                            frame_x=False, train=False, transform=None)
+    print(test_data.data.shape)
+    print(test_data.targets.shape)

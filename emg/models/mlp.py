@@ -48,41 +48,57 @@ class MLP(nn.Module):
         return x
 
 
-def main(train_args):
+def main(train_args, TEST_MODE=False):
     # 1. 设置好optimizer
     # 2. 定义好model
     args = {**train_args, **hyperparameters}
+    model = MLP(args['input_size'], args['hidden_size'], args['gesture_num'])
+    name = args['model'] + '-' + str(args['gesture_num'])
+    sub_folder = 'default'
+
+    tb_dir = generate_folder(root_folder='tensorboard', folder_name=name,
+                             sub_folder=sub_folder)
+    writer = SummaryWriter(tb_dir)
+    # dummpy_input = torch.ones((1, 128), dtype=torch.float, requires_grad=True)
+    # writer.add_graph(model, input_to_model=dummpy_input)
+    tensorboard_cb = TensorboardCallback(writer)
+
+    # from emg.utils.lr_scheduler import DecayLR
+    # lr_callback = DecayLR(start_lr=0.001, gamma=0.1, step_size=12)
+
+    net = EMGClassifier(module=model, model_name=name,
+                        sub_folder=sub_folder,
+                        hyperparamters=args,
+                        optimizer=torch.optim.Adam,
+                        max_epochs=args['epoch'],
+                        lr=args['lr'],
+                        iterator_train__shuffle=True,
+                        iterator_train__batch_size=args['train_batch_size'],
+                        iterator_valid__shuffle=False,
+                        iterator_valid__batch_size=args['valid_batch_size'],
+                        callbacks=[tensorboard_cb])
 
     train_set = CapgDataset(gesture=args['gesture_num'],
                             sequence_len=1,
                             sequence_result=False,
                             frame_x=args['frame_input'],
-                            TEST=args['test'],
+                            test_mode=TEST_MODE,
                             train=True)
 
     x = train_set.data
     y = train_set.targets
 
-    model = MLP(args['input_size'], args['hidden_size'], args['gesture_num'])
-    f_name = args['model'] + '-' + str(args['gesture_num']) + '-testearlystop'
-
-    tb_dir = generate_folder(root_folder='tensorboard', folder_name=f_name, sub_folder='3fc-2bn')
-    writer = SummaryWriter(tb_dir)
-    dummpy_input = torch.ones((1, 128), dtype=torch.float, requires_grad=True)
-    writer.add_graph(model, input_to_model=dummpy_input)
-
-    tensorboard_cb = TensorboardCallback(writer)
-    net = EMGClassifier(module=model, model_name=f_name,
-                        hyperparamters=args,
-                        lr=args['lr'],
-                        batch_size=args['train_batch_size'],
-                        continue_train=False,
-                        stop_patience=args['stop_patience'],
-                        max_epochs=args['epoch'],
-                        optimizer=torch.optim.Adam,
-                        callbacks=[tensorboard_cb])
-
     net.fit(x, y)
+
+    # test_set = CapgDataset(gesture=args['gesture_num'],
+    #                        sequence_len=1,
+    #                        sequence_result=False,
+    #                        frame_x=args['frame_input'],
+    #                        test_mode = TEST_MODE,
+    #                        train=False)
+    #
+    # x_test = test_set.data
+    # y_test = test_set.targets
 
 
 if __name__ == "__main__":
@@ -95,8 +111,7 @@ if __name__ == "__main__":
         'train_batch_size': 1024,
         'val_batch_size': 2048,
         'stop_patience': 5,
-        'log_interval': 100,
-        'test': True
+        'log_interval': 100
     }
 
-    main(test_args)
+    main(test_args, TEST_MODE=True)

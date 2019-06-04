@@ -58,7 +58,7 @@ class LSTM(nn.Module):
         return x
 
 
-def main(train_args):
+def main(train_args, TEST_MODE=False):
     # 1. 设置好optimizer
     # 2. 定义好model
     args = {**train_args, **hyperparameters}
@@ -93,7 +93,7 @@ def main(train_args):
                             sequence_len=10,
                             sequence_result=False,
                             frame_x=args['frame_input'],
-                            TEST=args['test'],
+                            test_mode=TEST_MODE,
                             train=True)
 
     x_train = train_set.data
@@ -105,7 +105,7 @@ def main(train_args):
     #                        sequence_len=10,
     #                        sequence_result=False,
     #                        frame_x=args['frame_input'],
-    #                        TEST=args['test'],
+    #                        test_mode = TEST_MODE,
     #                        train=False)
     #
     # x_test = test_set.data
@@ -122,11 +122,10 @@ if __name__ == "__main__":
         'train_batch_size': 256,
         'valid_batch_size': 1024,
         'stop_patience': 7,
-        'log_interval': 100,
-        'test': False
+        'log_interval': 100
     }
 
-    main(test_args)
+    main(test_args, TEST_MODE=True)
     # print(torch.cuda.is_available())
     # print(torch.cuda.device_count())
     # print(torch.cuda.get_device_name(0))
