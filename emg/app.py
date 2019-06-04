@@ -21,7 +21,7 @@ import importlib
 @click.option('--lr_step', default=10, help='learning rate decay step size')
 @click.option('--epoch', default=100, help='maximum epoch')
 @click.option('--train_batch_size', default=256, help='')
-@click.option('--val_batch_size', default=1024, help='')
+@click.option('--valid_batch_size', default=1024, help='')
 @click.option('--stop_patience', default=5, help='')
 @click.option('--log_interval', default=100, type=int, help='')
 def main(**args):

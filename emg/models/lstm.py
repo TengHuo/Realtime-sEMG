@@ -62,7 +62,7 @@ def main(train_args):
     # 1. 设置好optimizer
     # 2. 定义好model
     args = {**train_args, **hyperparameters}
-
+    # TODO: 修改代码，添加Grid Search
     model = LSTM(args['input_size'], args['hidden_size'], args['gesture_num'])
     name = args['model'] + '-' + str(args['gesture_num'])
     sub_folder = 'lstm-dp_0.2-no_lr'

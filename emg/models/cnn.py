@@ -12,9 +12,12 @@
 import torch
 import torch.nn as nn
 from torch.nn.modules.utils import _pair
+from torch.utils.tensorboard import SummaryWriter
 
-from emg.models.train_manager import Manager
-from emg.data_loader.capg_data import default_capg_loaders
+from emg.models.base import EMGClassifier
+from emg.utils import TensorboardCallback, generate_folder
+from emg.data_loader.capg_data import CapgDataset
+
 
 hyperparameters = {
     'input_size': (16, 8),
@@ -100,30 +103,68 @@ class CNN(nn.Module):
 
 
 def main(train_args):
-    # 1. 设置好optimizer
-    # 2. 定义好model
     args = {**train_args, **hyperparameters}
-    model = CNN(args['gesture_num'])
-    optimizer = torch.optim.Adam(model.parameters(), lr=args['lr'])
 
-    manager = Manager(args, model, default_capg_loaders)
-    manager.compile(optimizer)
-    manager.summary()
-    manager.start_train()
-    # manager.test()  # TODO
-    manager.finish()
+    model = CNN(args['gesture_num'])
+    name = args['model'] + '-' + str(args['gesture_num'])
+    sub_folder = 'default'
+
+    tb_dir = generate_folder(root_folder='tensorboard', folder_name=name,
+                             sub_folder=sub_folder)
+    writer = SummaryWriter(tb_dir)
+    # dummpy_input = torch.ones((1, 1, 16, 8), dtype=torch.float, requires_grad=True)
+    # writer.add_graph(model, input_to_model=dummpy_input)
+    tensorboard_cb = TensorboardCallback(writer)
+
+    from emg.utils.lr_scheduler import DecayLR
+    lr_callback = DecayLR(start_lr=0.001, gamma=0.1, step_size=20)
+
+    net = EMGClassifier(module=model, model_name=name,
+                        sub_folder=sub_folder,
+                        hyperparamters=args,
+                        optimizer=torch.optim.Adam,
+                        max_epochs=args['epoch'],
+                        lr=args['lr'],
+                        iterator_train__shuffle=True,
+                        iterator_train__batch_size=args['train_batch_size'],
+                        iterator_valid__shuffle=False,
+                        iterator_valid__batch_size=args['valid_batch_size'],
+                        callbacks=[tensorboard_cb, lr_callback])
+
+    train_set = CapgDataset(gesture=args['gesture_num'],
+                            sequence_len=1,
+                            sequence_result=False,
+                            frame_x=args['frame_input'],
+                            TEST=False,
+                            train=True)
+
+    x_train = train_set.data
+    y_train = train_set.targets
+
+    net.fit(X=x_train, y=y_train)
+
+    # test_set = CapgDataset(gesture=args['gesture_num'],
+    #                        sequence_len=10,
+    #                        sequence_result=False,
+    #                        frame_x=args['frame_input'],
+    #                        TEST=args['test'],
+    #                        train=False)
+    #
+    # x_test = test_set.data
+    # y_test = test_set.targets
 
 
 if __name__ == "__main__":
     test_args = {
         'model': 'cnn',
         'gesture_num': 8,
-        'lr': 0.01,
+        'lr': 0.001,
         'lr_step': 5,
-        'epoch': 10,
-        'train_batch_size': 64,
-        'val_batch_size': 256,
+        'epoch': 60,
+        'train_batch_size': 128,
+        'valid_batch_size': 1024,
         'stop_patience': 5,
+        'log_interval': 100,
         'test': False
     }
 
