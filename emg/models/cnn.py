@@ -102,7 +102,7 @@ class CNN(nn.Module):
         return self.fc(x)
 
 
-def main(train_args):
+def main(train_args, TEST_MODE=False):
     args = {**train_args, **hyperparameters}
 
     model = CNN(args['gesture_num'])
@@ -135,7 +135,7 @@ def main(train_args):
                             sequence_len=1,
                             sequence_result=False,
                             frame_x=args['frame_input'],
-                            TEST=False,
+                            test_mode=TEST_MODE,
                             train=True)
 
     x_train = train_set.data
@@ -147,7 +147,7 @@ def main(train_args):
     #                        sequence_len=10,
     #                        sequence_result=False,
     #                        frame_x=args['frame_input'],
-    #                        TEST=args['test'],
+    #                        test_mode = TEST_MODE,
     #                        train=False)
     #
     # x_test = test_set.data
@@ -164,8 +164,7 @@ if __name__ == "__main__":
         'train_batch_size': 128,
         'valid_batch_size': 1024,
         'stop_patience': 5,
-        'log_interval': 100,
-        'test': False
+        'log_interval': 100
     }
 
-    main(test_args)
+    main(test_args, TEST_MODE=True)
