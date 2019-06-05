@@ -12,6 +12,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from torch.utils.tensorboard import SummaryWriter
 
 from emg.models.base import EMGClassifier
 from emg.utils import TensorboardCallback, generate_folder
@@ -47,17 +48,21 @@ def get_sinusoid_encoding_table(n_position, d_hid, padding_idx=None):
 
     # value = torch.Tensor(sinusoid_table)
     value = torch.from_numpy(sinusoid_table)
-    return value.to('cuda')
+    return value
 
 
 def get_attn_key_pad_mask(seq_q):
     """ For masking out the padding part of key sequence. """
-    padding_mask = torch.zeros((seq_q.size(0), seq_q.size(1), seq_q.size(1)), dtype=torch.uint8)
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    padding_mask = torch.zeros((seq_q.size(0), seq_q.size(1), seq_q.size(1)),
+                               dtype=torch.uint8, device=device)
     return padding_mask
 
 
 def get_non_pad_mask(seq):
-    value = torch.ones((seq.size(0), seq.size(1), 1), requires_grad=True)
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    value = torch.ones((seq.size(0), seq.size(1), 1), requires_grad=True,
+                       device=device)
     return value
     # assert seq.dim() == 2
     # return seq.ne(0).type(torch.float).unsqueeze(-1)
@@ -188,10 +193,8 @@ class Encoder(nn.Module):
                  n_layers, n_head, d_k, d_v,
                  d_model, d_inner, dropout=0.1):
         super().__init__()
-
-        self.position_enc = nn.Embedding.from_pretrained(
-            get_sinusoid_encoding_table(len_seq+1, d_word_vec, padding_idx=0),
-            freeze=True)
+        pos_emb = get_sinusoid_encoding_table(len_seq+1, d_word_vec, padding_idx=0)
+        self.position_enc = nn.Embedding.from_pretrained(pos_emb, freeze=True)
 
         self.layer_stack = nn.ModuleList([
             EncoderLayer(d_model, d_inner, n_head, d_k, d_v, dropout=dropout)
@@ -199,11 +202,14 @@ class Encoder(nn.Module):
 
     def forward(self, src_seq, src_pos):
         # -- Prepare masks
-        src_seq = src_seq.to('cuda')  # BUG: 不能在cuda上训练
+        # BUG: 不能在cuda上训练
         slf_attn_mask = get_attn_key_pad_mask(src_seq)
         non_pad_mask = get_non_pad_mask(src_seq)
 
         # -- Forward
+        # print(src_pos)
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        src_pos = src_pos.to(device)
         pos_emb = self.position_enc(src_pos)
         pos_emb = pos_emb.to(torch.float32)
         enc_output = src_seq + pos_emb
@@ -247,7 +253,6 @@ class Transformer(nn.Module):
         src_pos = torch.arange(1, src_seq.size(1)+1)
         src_pos = src_pos.repeat(src_seq.size(0))
         src_pos = src_pos.view(-1, src_seq.size(1))
-        src_pos = src_pos.to('cuda')
         enc_output = self.encoder(src_seq, src_pos)
         # print(src_seq.size())
         # print(enc_output.size())
@@ -263,12 +268,12 @@ def main(train_args, TEST_MODE=False):
     name = args['model'] + '-' + str(args['gesture_num'])
     sub_folder = 'default'
 
-    tb_dir = generate_folder(root_folder='tensorboard', folder_name=name,
-                             sub_folder=sub_folder)
-    writer = SummaryWriter(tb_dir)
+    # tb_dir = generate_folder(root_folder='tensorboard', folder_name=name,
+    #                          sub_folder=sub_folder)
+    # writer = SummaryWriter(tb_dir)
     # dummpy_input = torch.ones((1, 128), dtype=torch.float, requires_grad=True)
     # writer.add_graph(model, input_to_model=dummpy_input)
-    tensorboard_cb = TensorboardCallback(writer)
+    # tensorboard_cb = TensorboardCallback(writer)
 
     # from emg.utils.lr_scheduler import DecayLR
     # lr_callback = DecayLR(start_lr=0.001, gamma=0.1, step_size=12)
@@ -283,7 +288,8 @@ def main(train_args, TEST_MODE=False):
                         iterator_train__batch_size=args['train_batch_size'],
                         iterator_valid__shuffle=False,
                         iterator_valid__batch_size=args['valid_batch_size'],
-                        callbacks=[tensorboard_cb])
+                        callbacks=[])
+                        # callbacks=[tensorboard_cb])
 
     train_set = CapgDataset(gesture=args['gesture_num'],
                             sequence_len=10,
@@ -294,7 +300,8 @@ def main(train_args, TEST_MODE=False):
 
     x = train_set.data
     y = train_set.targets
-
+    print(x.shape)
+    print(y.shape)
     net.fit(x, y)
 
     # test_set = CapgDataset(gesture=args['gesture_num'],
@@ -316,9 +323,9 @@ if __name__ == "__main__":
         'lr_step': 5,
         'epoch': 10,
         'train_batch_size': 64,
-        'val_batch_size': 1024,
+        'valid_batch_size': 1024,
         'stop_patience': 5,
         'log_interval': 100
     }
 
-    main(test_args, TEST_MODE=True)
+    main(test_args, TEST_MODE=False)
