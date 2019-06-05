@@ -10,7 +10,7 @@
 
 import torch
 from skorch import NeuralNet
-from tensorboardX import SummaryWriter
+from torch.utils.tensorboard import SummaryWriter
 from skorch.callbacks.base import Callback
 
 

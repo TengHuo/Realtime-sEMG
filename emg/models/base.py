@@ -15,6 +15,8 @@ import torch
 from torch import nn
 from torch.utils.data import DataLoader
 
+from sklearn.metrics import accuracy_score
+
 from skorch import NeuralNet
 from skorch.callbacks import EpochTimer, EpochScoring, BatchScoring
 from skorch.callbacks import Checkpoint, TrainEndCheckpoint, EarlyStopping
@@ -23,6 +25,7 @@ from skorch.utils import is_dataset, noop, to_numpy
 from skorch.utils import train_loss_score, valid_loss_score
 
 from emg.utils import init_parameters, generate_folder, ReportLog, ProgressBar
+from emg.utils.report_logger import save_evaluation
 
 
 class EMGClassifier(NeuralNet):
@@ -190,3 +193,9 @@ class EMGClassifier(NeuralNet):
             y_preds.append(to_numpy(yp.max(-1)[-1]))
         y_pred = np.concatenate(y_preds, 0)
         return y_pred
+
+    def test_model(self, x_test, y_test):
+        y_pred = self.predict(x_test)
+        score = accuracy_score(y_test, y_pred)
+        save_evaluation(self.model_path, score)
+        return score

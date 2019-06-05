@@ -109,6 +109,18 @@ class ReportLog(Callback):
         sys.stdout.flush()
 
 
+def save_evaluation(report_folder: str, score: float):
+    try:
+        report_path = os.path.join(report_folder, 'report.md')
+        with open(report_path, 'r+') as f:
+            report = f.read()
+            report = report.replace('{{evaluation}}', '{}'.format(score))
+            f.write(report)
+    except IOError as e:
+        print('read file failure')
+        print(e)
+
+
 def _read_template() -> str:
     try:
         template_path = os.path.join(os.sep, *os.path.dirname(os.path.realpath(__file__)).split(os.sep))
@@ -131,8 +143,8 @@ def _generate(content: dict, template: str) -> str:
     template = template.replace('{{hyperparameters}}', args_str)
     template = template.replace('{{summary}}', content['model_summary'])
     template = template.replace('{{log}}', '\n'.join(content['log']))
-    template = template.replace('{{image}}', './history.png')
-    generated_report = template.replace('{{evaluation}}', content['evaluation'])
+    generated_report = template.replace('{{image}}', './history.png')
+    # generated_report = template.replace('{{evaluation}}', content['evaluation'])
     return generated_report
 
 
