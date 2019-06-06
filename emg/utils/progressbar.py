@@ -84,8 +84,14 @@ class ProgressBar(Callback):
         self.epoch_step = 0
 
     # pylint: disable=attribute-defined-outside-init
-    def on_batch_end(self, net, **kwargs):
-        self.pbar.set_postfix(self._get_postfix_dict(net, self.epoch_step), refresh=False)
+    def on_batch_end(self, net,
+                     Xi=None, yi=None, training=None, **kwargs):
+        postfix = {'Epoch': '{}/{}'.format(self.epoch_step, net.max_epochs)}
+        if training:
+            postfix['train_loss'] = '{:.4f}'.format(net.history[-1, 'batches', -1, 'train_loss'])
+        else:
+            postfix['valid_loss'] = '{:.4f}'.format(net.history[-1, 'batches', -1, 'valid_loss'])
+        self.pbar.set_postfix(postfix, refresh=False)
         self.pbar.update()
 
     # pylint: disable=attribute-defined-outside-init, arguments-differ

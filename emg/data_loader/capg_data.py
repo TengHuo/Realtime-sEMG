@@ -59,7 +59,7 @@ class CapgDataset(Dataset):
         self.seq_length = sequence_len
         self.frame_x = frame_x  # x is frame format or not
 
-        self.scale = 1000
+        self.scale = 100
 
         root_path = os.path.join(os.sep, *os.path.dirname(os.path.realpath(__file__)).split(os.sep)[:-2])
         processed_data = os.path.join(root_path, 'data', 'capg-processed')
@@ -104,10 +104,13 @@ class CapgDataset(Dataset):
         x = x[start:end]  # now x.shape is (N, 128)
 
         if self.frame_x:
-            # x shape is (1, 128), reshape to frame format: (1, 16, 8)
-            if x.shape[0] != 1:
-                raise ValueError('shape error')
-            x = x.reshape((1, 16, 8))
+            # x shape is (N, 128), reshape to frame format: (N, 16, 8)
+            if self.seq_length == 1:
+                # used for 2d cnn
+                x = x.reshape((1, 16, 8))
+            else:
+                # used for 3d cnn
+                x = x.reshape((1, x.shape[0], 16, 8))
         elif self.seq_length == 1:
             x = x[0]
 

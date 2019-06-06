@@ -57,8 +57,7 @@ def main(train_args, TEST_MODE=False):
     # TODO: 修改代码，添加Grid Search
     model = LSTM(args['input_size'], args['hidden_size'], args['gesture_num'])
     name = args['model'] + '-' + str(args['gesture_num'])
-    # sub_folder = 'length-{}'.format(args['seq_length'])
-    sub_folder = 'final-test-data'
+    sub_folder = 'length-{}'.format(args['seq_length'])
     tensorboard_cb = config_tensorboard(name, sub_folder, model, (1, 10, 128))
 
     # from emg.utils.lr_scheduler import DecayLR

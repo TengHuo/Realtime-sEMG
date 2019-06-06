@@ -12,12 +12,9 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torch.utils.tensorboard import SummaryWriter
-
-from sklearn.metrics import accuracy_score
 
 from emg.models.base import EMGClassifier
-from emg.utils import TensorboardCallback, generate_folder
+from emg.utils import config_tensorboard
 from emg.data_loader.capg_data import CapgDataset
 
 
@@ -56,12 +53,7 @@ def main(train_args, TEST_MODE=False):
     name = args['model'] + '-' + str(args['gesture_num'])
     sub_folder = 'final-test'
 
-    # tb_dir = generate_folder(root_folder='tensorboard', folder_name=name,
-    #                          sub_folder=sub_folder)
-    # writer = SummaryWriter(tb_dir)
-    # dummpy_input = torch.ones((1, 128), dtype=torch.float, requires_grad=True)
-    # writer.add_graph(model, input_to_model=dummpy_input)
-    # tensorboard_cb = TensorboardCallback(writer)
+    tensorboard_cb = config_tensorboard(name, sub_folder, model, (1, 128))
 
     # from emg.utils.lr_scheduler import DecayLR
     # lr_callback = DecayLR(start_lr=0.001, gamma=0.1, step_size=12)
@@ -79,8 +71,7 @@ def main(train_args, TEST_MODE=False):
                         max_epochs=args['epoch'],
                         lr=args['lr'],
                         dataset=train_set,
-                        callbacks=[])
-                        # callbacks=[tensorboard_cb])
+                        callbacks=[tensorboard_cb])
 
     net.fit_with_dataset()
 
@@ -99,11 +90,11 @@ if __name__ == "__main__":
         'gesture_num': 8,
         'lr': 0.001,
         'lr_step': 5,
-        'epoch': 1,
+        'epoch': 60,
         'train_batch_size': 512,
         'valid_batch_size': 2048,
         'stop_patience': 5,
         'log_interval': 100
     }
 
-    main(test_args, TEST_MODE=True)
+    main(test_args, TEST_MODE=False)

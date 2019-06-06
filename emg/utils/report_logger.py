@@ -107,8 +107,8 @@ class ReportLog(Callback):
         train_loss = data['train_loss']
         val_loss = data['valid_loss']
         val_acc = data['valid_acc']
-        log = 'Epoch {}, Train loss: {:.4f} - Valid loss: {:.4f} - Valid accuracy: {:.4f}' \
-              .format(data['epoch'], train_loss, val_loss, val_acc)
+        log = 'Epoch: {}/{}, Train loss: {:.4f} - Valid loss: {:.4f} - Valid accuracy: {:.4f}' \
+              .format(data['epoch'], net.max_epochs, train_loss, val_loss, val_acc)
         self.__log_report.append(log)
         print()
         self._sink(log, net.verbose)
