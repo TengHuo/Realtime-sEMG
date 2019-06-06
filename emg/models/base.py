@@ -37,6 +37,12 @@ class EMGClassifier(NeuralNet):
         super(EMGClassifier, self).__init__(module, *args,
                                             device=device,
                                             criterion=criterion,
+                                            iterator_train__shuffle=True,
+                                            iterator_train__num_workers=4,
+                                            iterator_train__batch_size=hyperparamters['train_batch_size'],
+                                            iterator_valid__shuffle=False,
+                                            iterator_valid__num_workers=4,
+                                            iterator_valid__batch_size=hyperparamters['valid_batch_size'],
                                             train_split=train_split,
                                             **kwargs)
         self.model_name = model_name
@@ -88,18 +94,18 @@ class EMGClassifier(NeuralNet):
         ]
 
     # pylint: disable=signature-differs
-    def check_data(self, X, y):
-        if (
-                (y is None) and
-                (not is_dataset(X)) and
-                (self.iterator_train is DataLoader)
-        ):
-            msg = ("No y-values are given (y=None). You must either supply a "
-                   "Dataset as X or implement your own DataLoader for "
-                   "training (and your validation) and supply it using the "
-                   "``iterator_train`` and ``iterator_valid`` parameters "
-                   "respectively.")
-            raise ValueError(msg)
+    # def check_data(self, X, y):
+    #     if (
+    #             (y is None) and
+    #             (not is_dataset(X)) and
+    #             (self.iterator_train is DataLoader)
+    #     ):
+    #         msg = ("No y-values are given (y=None). You must either supply a "
+    #                "Dataset as X or implement your own DataLoader for "
+    #                "training (and your validation) and supply it using the "
+    #                "``iterator_train`` and ``iterator_valid`` parameters "
+    #                "respectively.")
+    #         raise ValueError(msg)
 
     # pylint: disable=arguments-differ
     def get_loss(self, y_pred, y_true, *args, **kwargs):
@@ -108,7 +114,7 @@ class EMGClassifier(NeuralNet):
         return super().get_loss(y_pred, y_true, *args, **kwargs)
 
     # pylint: disable=signature-differs
-    def fit(self, X, y, **fit_params):
+    def fit_with_dataset(self):
         """See ``NeuralNet.fit``.
 
         In contrast to ``NeuralNet.fit``, ``y`` is non-optional to
@@ -120,7 +126,9 @@ class EMGClassifier(NeuralNet):
         # pylint: disable=useless-super-delegation
         # this is actually a pylint bug:
         # https://github.com/PyCQA/pylint/issues/1085
-        return super(EMGClassifier, self).fit(X, y, **fit_params)
+        x = None
+        y = None
+        return super(EMGClassifier, self).fit(x, y)
 
     def predict_proba(self, X):
         """Where applicable, return probability estimates for
@@ -194,8 +202,17 @@ class EMGClassifier(NeuralNet):
         y_pred = np.concatenate(y_preds, 0)
         return y_pred
 
-    def test_model(self, x_test, y_test):
-        y_pred = self.predict(x_test)
-        score = accuracy_score(y_test, y_pred)
-        save_evaluation(self.model_path, score)
-        return score
+    def test_model(self, test_set):
+        test_dataloader = DataLoader(dataset=test_set,
+                                     batch_size=1024,
+                                     shuffle=False,
+                                     num_workers=4)
+        all_score = []
+        for step, (batch_x, batch_y) in enumerate(test_dataloader):
+            y_pred = self.evaluation_step(batch_x)
+            y_pred = to_numpy(y_pred.max(-1)[-1])
+            score = accuracy_score(batch_y, y_pred)
+            all_score.append(score)
+        avg_score = np.average(all_score)
+        save_evaluation(self.model_path, avg_score)
+        return avg_score

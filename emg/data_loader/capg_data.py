@@ -11,6 +11,7 @@
 import os
 import re
 import h5py
+import math
 
 from torch.utils.data import DataLoader, Dataset
 from scipy.io import loadmat
@@ -50,11 +51,15 @@ class CapgDataset(Dataset):
     supporting integer indexing in range from 0 to len(self) exclusive.
     """
 
-    def __init__(self, gesture=8, sequence_len=1, sequence_result=False,
+    def __init__(self, gesture, sequence_len, sequence_result=False,
                  frame_x=False, train=True, test_mode=False, transform=None):
 
         self.transform = transform
         self.train = train  # training set or test set
+        self.seq_length = sequence_len
+        self.frame_x = frame_x  # x is frame format or not
+
+        self.scale = 1000
 
         root_path = os.path.join(os.sep, *os.path.dirname(os.path.realpath(__file__)).split(os.sep)[:-2])
         processed_data = os.path.join(root_path, 'data', 'capg-processed')
@@ -62,46 +67,24 @@ class CapgDataset(Dataset):
         test_data_path = os.path.join(processed_data, 'test.h5')
         if os.path.isfile(train_data_path) and os.path.isfile(test_data_path):
             print('data exist, load {} data from the file'.format('train' if train else 'test'))
-            train_data, test_data = _load_capg_from_h5(train_data_path, test_data_path)
+            train_set, test_set = _load_capg_from_h5(train_data_path, test_data_path)
         else:
             print('processed capg data not exist, create new h5 files')
             os.mkdir(processed_data)
             capg_data = _load_capg_all()
-            train_data, test_data = _capg_train_test_split(capg_data, test_size=0.1)
-            _save_capg_to_h5(train_data, test_data, train_data_path, test_data_path)
+            train_set, test_set = _capg_train_test_split(capg_data, test_size=0.1)
+            _save_capg_to_h5(train_set, test_set, train_data_path, test_data_path)
 
         if self.train:
-            X, y = _prepare_data(train_data, gesture_num=gesture)
+            X, y = _prepare_data(train_set, gesture_num=gesture)
         else:
-            X, y = _prepare_data(test_data, gesture_num=gesture)
-
-        original_shape = X.shape
-        if 1 == sequence_len:
-            # reshape to (None*1000, 128)
-            X = X.reshape(original_shape[0]*1000, 128)
-            y = y.reshape((y.shape[0], 1)) * np.ones((1, 1000))
-            y = y.flatten()
-        else:
-            # reshape to (None, seq_len, 128)
-            seq_amount = int(1000/sequence_len)
-            X = X.reshape((original_shape[0]*seq_amount, sequence_len, 128))
-            y = y.reshape((y.shape[0], 1)) * np.ones((1, seq_amount))
-            y = y.flatten()
-
-        if sequence_result:
-            y = y.reshape((y.shape[0], 1)) * np.ones((1, sequence_len))
-
-        # reshape x to frame (16, 8)
-        if frame_x:
-            old_shape = X.shape
-            new_shape = (*old_shape[0:-1], 1, 16, 8)
-            X = X.reshape(new_shape)
+            X, y = _prepare_data(test_set, gesture_num=gesture)
 
         y = y.astype(int)
 
-        if test_mode:
+        if test_mode and self.train:
             # for test code, only use small part of data
-            self.data, self.targets = X[:20480], y[:20480]
+            self.data, self.targets = X[:64], y[:64]
         else:
             self.data, self.targets = X, y
 
@@ -113,7 +96,20 @@ class CapgDataset(Dataset):
         Returns:
             tuple: (X, target) where target is index of the target class.
         """
-        x, y = self.data[index], self.targets[index]
+        true_index = math.floor(index/self.scale)
+        x, y = self.data[true_index], self.targets[true_index]
+        # x.shape is (1000, 128)
+        start = np.random.randint(0, 1000 - self.seq_length)
+        end = start + self.seq_length
+        x = x[start:end]  # now x.shape is (N, 128)
+
+        if self.frame_x:
+            # x shape is (1, 128), reshape to frame format: (1, 16, 8)
+            if x.shape[0] != 1:
+                raise ValueError('shape error')
+            x = x.reshape((1, 16, 8))
+        elif self.seq_length == 1:
+            x = x[0]
 
         if self.transform is not None:
             x = self.transform(x)
@@ -121,13 +117,9 @@ class CapgDataset(Dataset):
         return x, y
 
     def __len__(self):
-        return len(self.data)
+        return self.data.shape[0] * self.scale
 
 
-# TODO: 重写这部分代码，现在代码生成的数据会因为sequence长度不同导致数据量不同
-# 应该改为从长度为1000的sequence里随机抽样，并且保证每个gesture对应的样本数量相同
-# 需要处理skorch从dataset里读数据的问题
-# 还要考虑数据如果shuffle了如何保证x和y的对应
 def _prepare_data(raw_data, gesture_num=8):
     """convert the data from raw data to numpy array
     """
@@ -194,16 +186,16 @@ def _load_capg_from_h5(train_file_path, test_file_path):
     return train_set, test_set
 
 
-def _save_capg_to_h5(train_data, test_data, train_file_path, test_file_path):
+def _save_capg_to_h5(train_set, test_set, train_file_path, test_file_path):
     with h5py.File(train_file_path, 'w') as train_file:
         train_grp = train_file.create_group('train')
-        for gesture in train_data.keys():
-            train_grp.create_dataset(str(gesture), data=train_data[gesture], dtype=float)
+        for gesture in train_set.keys():
+            train_grp.create_dataset(str(gesture), data=train_set[gesture], dtype=float)
 
     with h5py.File(test_file_path, 'w') as test_file:
         test_grp = test_file.create_group('test')
-        for gesture in test_data.keys():
-            test_grp.create_dataset(str(gesture), data=test_data[gesture], dtype=float)
+        for gesture in test_set.keys():
+            test_grp.create_dataset(str(gesture), data=test_set[gesture], dtype=float)
 
 
 def _load_capg_data(db_name):

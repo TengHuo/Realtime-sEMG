@@ -84,13 +84,19 @@ class ReportLog(Callback):
         valid_history = []
         batch_step = 0
         for epoch in range(len(history)):
-            history_batch = history[epoch, 'batches']
-            for batch_info in history_batch:
-                batch_step += 1
-                if 'train_loss' in batch_info and \
-                        batch_step % net.hyperparamters['log_interval'] == 1:
-                    train_history.append([batch_step, batch_info['train_loss']])
-            valid_history.append([batch_step, history[epoch, 'valid_loss'], history[epoch, 'valid_acc']])
+            if 'valid_loss' in history[epoch].keys() and 'valid_acc' in history[epoch].keys():
+                valid_history.append([batch_step, history[epoch, 'valid_loss'], history[epoch, 'valid_acc']])
+
+                history_batch = history[epoch, 'batches']
+                for batch_info in history_batch:
+                    batch_step += 1
+                    if 'train_loss' in batch_info and \
+                            batch_step % net.hyperparamters['log_interval'] == 1:
+                        train_history.append([batch_step, batch_info['train_loss']])
+            else:
+                # train is interrupted, validation hasn't been run , don't record this epoch
+                pass
+
         train_history = np.array(train_history)
         valid_history = np.array(valid_history)
         history_fig_path = os.path.join(net.model_path, 'history.png')

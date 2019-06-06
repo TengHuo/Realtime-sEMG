@@ -23,9 +23,7 @@ from emg.data_loader.capg_data import CapgDataset
 
 hyperparameters = {
     'input_size': (128,),
-    'hidden_size': 256,
-    'seq_result': False,
-    'frame_input': False
+    'hidden_size': 256
 }
 
 
@@ -56,7 +54,7 @@ def main(train_args, TEST_MODE=False):
     args = {**train_args, **hyperparameters}
     model = MLP(args['input_size'], args['hidden_size'], args['gesture_num'])
     name = args['model'] + '-' + str(args['gesture_num'])
-    sub_folder = 'test'
+    sub_folder = 'final-test'
 
     # tb_dir = generate_folder(root_folder='tensorboard', folder_name=name,
     #                          sub_folder=sub_folder)
@@ -68,42 +66,31 @@ def main(train_args, TEST_MODE=False):
     # from emg.utils.lr_scheduler import DecayLR
     # lr_callback = DecayLR(start_lr=0.001, gamma=0.1, step_size=12)
 
-    net = EMGClassifier(module=model, model_name=name,
+    train_set = CapgDataset(gesture=args['gesture_num'],
+                            sequence_len=1,
+                            test_mode=TEST_MODE,
+                            train=True)
+
+    net = EMGClassifier(module=model,
+                        model_name=name,
                         sub_folder=sub_folder,
                         hyperparamters=args,
                         optimizer=torch.optim.Adam,
                         max_epochs=args['epoch'],
                         lr=args['lr'],
-                        iterator_train__shuffle=True,
-                        iterator_train__batch_size=args['train_batch_size'],
-                        iterator_valid__shuffle=False,
-                        iterator_valid__batch_size=args['valid_batch_size'],
+                        dataset=train_set,
                         callbacks=[])
                         # callbacks=[tensorboard_cb])
 
-
-    train_set = CapgDataset(gesture=args['gesture_num'],
-                            sequence_len=1,
-                            sequence_result=False,
-                            frame_x=args['frame_input'],
-                            test_mode=TEST_MODE,
-                            train=True)
-
-    x = train_set.data
-    y = train_set.targets
-
-    net.fit(x, y)
+    net.fit_with_dataset()
 
     test_set = CapgDataset(gesture=args['gesture_num'],
                            sequence_len=1,
-                           sequence_result=False,
-                           frame_x=args['frame_input'],
-                           test_mode=False,
+                           test_mode=TEST_MODE,
                            train=False)
-    x_test = test_set.data
-    y_test = test_set.targets
-    score = net.test_model(x_test, y_test)
-    print('test accuracy: {}'.format(score))
+
+    avg_score = net.test_model(test_set)
+    print('test accuracy: {:.4f}'.format(avg_score))
 
 
 if __name__ == "__main__":
@@ -112,8 +99,8 @@ if __name__ == "__main__":
         'gesture_num': 8,
         'lr': 0.001,
         'lr_step': 5,
-        'epoch': 10,
-        'train_batch_size': 1024,
+        'epoch': 1,
+        'train_batch_size': 512,
         'valid_batch_size': 2048,
         'stop_patience': 5,
         'log_interval': 100

@@ -57,24 +57,12 @@ def main(train_args, TEST_MODE=False):
     # TODO: 修改代码，添加Grid Search
     model = LSTM(args['input_size'], args['hidden_size'], args['gesture_num'])
     name = args['model'] + '-' + str(args['gesture_num'])
-    sub_folder = 'length-{}'.format(args['seq_length'])
-
+    # sub_folder = 'length-{}'.format(args['seq_length'])
+    sub_folder = 'final-test-data'
     tensorboard_cb = config_tensorboard(name, sub_folder, model, (1, 10, 128))
 
     # from emg.utils.lr_scheduler import DecayLR
     # lr_callback = DecayLR(start_lr=0.001, gamma=0.1, step_size=12)
-
-    net = EMGClassifier(module=model, model_name=name,
-                        sub_folder=sub_folder,
-                        hyperparamters=args,
-                        optimizer=torch.optim.Adam,
-                        max_epochs=args['epoch'],
-                        lr=args['lr'],
-                        iterator_train__shuffle=True,
-                        iterator_train__batch_size=args['train_batch_size'],
-                        iterator_valid__shuffle=False,
-                        iterator_valid__batch_size=args['valid_batch_size'],
-                        callbacks=[tensorboard_cb])
 
     train_set = CapgDataset(gesture=args['gesture_num'],
                             sequence_len=10,
@@ -83,22 +71,25 @@ def main(train_args, TEST_MODE=False):
                             test_mode=TEST_MODE,
                             train=True)
 
-    x_train = train_set.data
-    y_train = train_set.targets
+    net = EMGClassifier(module=model,
+                        model_name=name,
+                        sub_folder=sub_folder,
+                        hyperparamters=args,
+                        optimizer=torch.optim.Adam,
+                        max_epochs=args['epoch'],
+                        lr=args['lr'],
+                        dataset=train_set,
+                        callbacks=[tensorboard_cb])
 
-    net.fit(X=x_train, y=y_train)
+    net.fit_with_dataset()
 
     test_set = CapgDataset(gesture=args['gesture_num'],
                            sequence_len=10,
-                           sequence_result=False,
-                           frame_x=args['frame_input'],
                            test_mode=TEST_MODE,
                            train=False)
 
-    x_test = test_set.data
-    y_test = test_set.targets
-    score = net.test_model(x_test, y_test)
-    print('test accuracy: {}'.format(score))
+    avg_score = net.test_model(test_set)
+    print('test accuracy: {:.4f}'.format(avg_score))
 
 
 hyperparameters = {
@@ -116,7 +107,7 @@ if __name__ == "__main__":
         'gesture_num': 8,
         'lr': 0.001,
         'lr_step': 5,
-        'epoch': 30,
+        'epoch': 1,
         'train_batch_size': 256,
         'valid_batch_size': 1024,
         'stop_patience': 7,
