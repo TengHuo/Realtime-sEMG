@@ -124,6 +124,10 @@ class CapgDataset(Dataset):
         return len(self.data)
 
 
+# TODO: 重写这部分代码，现在代码生成的数据会因为sequence长度不同导致数据量不同
+# 应该改为从长度为1000的sequence里随机抽样，并且保证每个gesture对应的样本数量相同
+# 需要处理skorch从dataset里读数据的问题
+# 还要考虑数据如果shuffle了如何保证x和y的对应
 def _prepare_data(raw_data, gesture_num=8):
     """convert the data from raw data to numpy array
     """

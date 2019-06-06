@@ -12,6 +12,17 @@ import torch
 from skorch import NeuralNet
 from torch.utils.tensorboard import SummaryWriter
 from skorch.callbacks.base import Callback
+from emg.utils.tools import generate_folder
+
+
+def config_tensorboard(folder_name, sub_folder, model=None, dummy_input_size=None):
+    tb_dir = generate_folder('tensorboard', folder_name, sub_folder)
+    writer = SummaryWriter(tb_dir)
+    if model and dummy_input_size:
+        dummy_input = torch.ones(dummy_input_size, dtype=torch.float,
+                                 requires_grad=True)
+        writer.add_graph(model, input_to_model=dummy_input)
+    return TensorboardCallback(writer)
 
 
 class TensorboardCallback(Callback):

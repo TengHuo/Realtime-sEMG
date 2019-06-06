@@ -101,7 +101,7 @@ class ReportLog(Callback):
         train_loss = data['train_loss']
         val_loss = data['valid_loss']
         val_acc = data['valid_acc']
-        log = 'Epoch {}, Train loss: {:.2f} - Valid loss: {:.2f} - Valid accuracy: {:.2f}' \
+        log = 'Epoch {}, Train loss: {:.4f} - Valid loss: {:.4f} - Valid accuracy: {:.4f}' \
               .format(data['epoch'], train_loss, val_loss, val_acc)
         self.__log_report.append(log)
         print()
@@ -114,7 +114,7 @@ def save_evaluation(report_folder: str, score: float):
         report_path = os.path.join(report_folder, 'report.md')
         with open(report_path, 'r+') as f:
             report = f.read()
-            report = report.replace('{{evaluation}}', '{}'.format(score))
+            report = report.replace('{{evaluation}}', '{:.4f}'.format(score))
             f.write(report)
     except IOError as e:
         print('read file failure')

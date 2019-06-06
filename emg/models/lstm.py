@@ -11,20 +11,12 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torch.utils.tensorboard import SummaryWriter
+
+from sklearn.model_selection import GridSearchCV
 
 from emg.models.base import EMGClassifier
-from emg.utils import TensorboardCallback, generate_folder
+from emg.utils import config_tensorboard
 from emg.data_loader.capg_data import CapgDataset
-
-
-hyperparameters = {
-    'input_size': (128,),
-    'hidden_size': 256,
-    'seq_length': 10,
-    'seq_result': False,
-    'frame_input': False
-}
 
 
 class LSTM(nn.Module):
@@ -65,14 +57,9 @@ def main(train_args, TEST_MODE=False):
     # TODO: 修改代码，添加Grid Search
     model = LSTM(args['input_size'], args['hidden_size'], args['gesture_num'])
     name = args['model'] + '-' + str(args['gesture_num'])
-    sub_folder = 'lstm-dp_0.2-no_lr'
+    sub_folder = 'length-{}'.format(args['seq_length'])
 
-    tb_dir = generate_folder(root_folder='tensorboard', folder_name=name,
-                             sub_folder=sub_folder)
-    writer = SummaryWriter(tb_dir)
-    dummpy_input = torch.ones((1, 10, 128), dtype=torch.float, requires_grad=True)
-    writer.add_graph(model, input_to_model=dummpy_input)
-    tensorboard_cb = TensorboardCallback(writer)
+    tensorboard_cb = config_tensorboard(name, sub_folder, model, (1, 10, 128))
 
     # from emg.utils.lr_scheduler import DecayLR
     # lr_callback = DecayLR(start_lr=0.001, gamma=0.1, step_size=12)
@@ -101,15 +88,26 @@ def main(train_args, TEST_MODE=False):
 
     net.fit(X=x_train, y=y_train)
 
-    # test_set = CapgDataset(gesture=args['gesture_num'],
-    #                        sequence_len=10,
-    #                        sequence_result=False,
-    #                        frame_x=args['frame_input'],
-    #                        test_mode = TEST_MODE,
-    #                        train=False)
-    #
-    # x_test = test_set.data
-    # y_test = test_set.targets
+    test_set = CapgDataset(gesture=args['gesture_num'],
+                           sequence_len=10,
+                           sequence_result=False,
+                           frame_x=args['frame_input'],
+                           test_mode=TEST_MODE,
+                           train=False)
+
+    x_test = test_set.data
+    y_test = test_set.targets
+    score = net.test_model(x_test, y_test)
+    print('test accuracy: {}'.format(score))
+
+
+hyperparameters = {
+    'input_size': (128,),
+    'hidden_size': 256,
+    'seq_length': 10,
+    'seq_result': False,
+    'frame_input': False
+}
 
 
 if __name__ == "__main__":
@@ -125,7 +123,6 @@ if __name__ == "__main__":
         'log_interval': 100
     }
 
-    main(test_args, TEST_MODE=True)
-    # print(torch.cuda.is_available())
-    # print(torch.cuda.device_count())
-    # print(torch.cuda.get_device_name(0))
+    for i in [1, 1.5, 2, 3, 5]:
+        hyperparameters['seq_length'] = int(10*i)
+        main(test_args, TEST_MODE=False)
