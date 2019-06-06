@@ -121,6 +121,8 @@ def save_evaluation(report_folder: str, score: float):
         with open(report_path, 'r+') as f:
             report = f.read()
             report = report.replace('{{evaluation}}', '{:.4f}'.format(score))
+            f.seek(0)
+            f.truncate()
             f.write(report)
     except IOError as e:
         print('read file failure')
