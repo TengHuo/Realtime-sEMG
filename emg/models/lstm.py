@@ -109,8 +109,8 @@ if __name__ == "__main__":
         'valid_batch_size': 1024,
         'stop_patience': 7,
         'log_interval': 100,
-        'name': '',
-        'sub_folder': ''
+        'name': 'lstm-test',
+        'sub_folder': 'test'
     }
 
     # for i in [10, 15, 20, 30, 50]:

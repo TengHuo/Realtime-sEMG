@@ -82,8 +82,8 @@ def main(train_args, TEST_MODE=False):
     # 2. 定义好model
     args = {**train_args, **hyperparameters}
     model = C3D(args['gesture_num'])
-    name = args['model'] + '-' + str(args['gesture_num'])
-    sub_folder = '2layer-conv'
+    name = args['name']  # args['model'] + '-' + str(args['gesture_num'])
+    sub_folder = args['sub_folder']  # '2layer-conv'
 
     from emg.utils import config_tensorboard
     tensorboard_cb = config_tensorboard(name, sub_folder, model, (1, 1, 10, 16, 8))
@@ -129,7 +129,9 @@ if __name__ == "__main__":
         'train_batch_size': 512,
         'valid_batch_size': 1024,
         'stop_patience': 5,
-        'log_interval': 100
+        'log_interval': 100,
+        'name': 'c3d-test',
+        'sub_folder': 'test'
     }
 
     main(test_args, TEST_MODE=False)
