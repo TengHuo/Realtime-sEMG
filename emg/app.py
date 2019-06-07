@@ -15,9 +15,9 @@ import importlib
 
 @click.command()
 @click.option('--model', default='seq2seq', help='Model name',
-              type=click.Choice(['lstm', 'seq2seq', 'mlp', 'cnn', 'net']))
+              type=click.Choice(['lstm', 'seq2seq', 'mlp', 'cnn', 'c3d']))
 @click.option('--gesture_num', default=8, help='')
-@click.option('--lr', default=0.01, help='learning rate')
+@click.option('--lr', default=0.001, help='learning rate')
 @click.option('--lr_step', default=10, help='learning rate decay step size')
 @click.option('--epoch', default=100, help='maximum epoch')
 @click.option('--train_batch_size', default=256, help='')

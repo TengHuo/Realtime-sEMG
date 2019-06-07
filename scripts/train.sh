@@ -1,19 +1,19 @@
 #! /bin/bash
 
 ## Train models for classifying 8-20 gestures in CapgMyo dataset
-for((i=20; i <= 20; i++));
-do
-    python -m emg.app --model cnn \
-                      --gesture_num $i \
-                      --lr 0.001 \
-                      --epoch 60 \
-                      --train_batch_size 256 \
-                      --valid_batch_size 1024 \
-                      --stop_patience 5 \
-                      --log_interval 100
-done
+#for((i=20; i <= 20; i++));
+#do
+#    python -m emg.app --model cnn \
+#                      --gesture_num $i \
+#                      --lr 0.001 \
+#                      --epoch 60 \
+#                      --train_batch_size 256 \
+#                      --valid_batch_size 1024 \
+#                      --stop_patience 5 \
+#                      --log_interval 100
+#done
 
-# lstm model with bn
+# lstm model
 #for((i=8; i <= 20; i++));
 #do
 #    python -m emg.app --model lstm \
@@ -21,11 +21,46 @@ done
 #                      --lr 0.001 \
 #                      --epoch 60 \
 #                      --train_batch_size 256 \
-#                      --val_batch_size 1024 \
+#                      --valid_batch_size 1024 \
 #                      --stop_patience 12 \
-#                      --log_interval 100 \
-#                      --load_model False
+#                      --log_interval 100
 #done
+
+python -m emg.app --model lstm \
+                  --gesture_num 8 \
+                  --lr 0.001 \
+                  --epoch 60 \
+                  --train_batch_size 256 \
+                  --valid_batch_size 1024 \
+                  --stop_patience 12 \
+                  --log_interval 100
+
+python -m emg.app --model lstm \
+                  --gesture_num 12 \
+                  --lr 0.001 \
+                  --epoch 60 \
+                  --train_batch_size 256 \
+                  --valid_batch_size 1024 \
+                  --stop_patience 12 \
+                  --log_interval 100
+
+python -m emg.app --model lstm \
+                  --gesture_num 16 \
+                  --lr 0.001 \
+                  --epoch 60 \
+                  --train_batch_size 256 \
+                  --valid_batch_size 1024 \
+                  --stop_patience 12 \
+                  --log_interval 100
+
+python -m emg.app --model lstm \
+                  --gesture_num 20 \
+                  --lr 0.001 \
+                  --epoch 60 \
+                  --train_batch_size 256 \
+                  --valid_batch_size 1024 \
+                  --stop_patience 12 \
+                  --log_interval 100
 
 ## seq2seq model with bn
 #for((i=8; i <= 20; i++));
@@ -42,15 +77,25 @@ done
 #done
 
 # mlp model, mainly used for test code
-#for((i=8; i <= 8; i++));
+#for((i=8; i <= 20; i++));
 #do
 #    python -m emg.app --model mlp \
 #                      --gesture_num $i \
 #                      --lr 0.001 \
-#                      --epoch 60 \
-#                      --train_batch_size 256 \
-#                      --val_batch_size 1024 \
+#                      --epoch 100 \
+#                      --train_batch_size 512 \
+#                      --valid_batch_size 2048 \
 #                      --stop_patience 7 \
-#                      --log_interval 100 \
-#                      --load_model False
+#                      --log_interval 100
 #done
+
+# c3d model
+python -m emg.app --model c3d \
+                  --gesture_num 8 \
+                  --lr 0.001 \
+                  --epoch 100 \
+                  --train_batch_size 512 \
+                  --valid_batch_size 2048 \
+                  --stop_patience 7 \
+                  --log_interval 100
+

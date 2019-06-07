@@ -51,7 +51,7 @@ def main(train_args, TEST_MODE=False):
     args = {**train_args, **hyperparameters}
     model = MLP(args['input_size'], args['hidden_size'], args['gesture_num'])
     name = args['model'] + '-' + str(args['gesture_num'])
-    sub_folder = 'final-test'
+    sub_folder = '200epoch'
 
     tensorboard_cb = config_tensorboard(name, sub_folder, model, (1, 128))
 
@@ -90,7 +90,7 @@ if __name__ == "__main__":
         'gesture_num': 8,
         'lr': 0.001,
         'lr_step': 5,
-        'epoch': 60,
+        'epoch': 200,
         'train_batch_size': 512,
         'valid_batch_size': 2048,
         'stop_patience': 5,

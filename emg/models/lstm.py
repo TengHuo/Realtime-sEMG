@@ -20,15 +20,15 @@ from emg.data_loader.capg_data import CapgDataset
 
 
 class LSTM(nn.Module):
-    def __init__(self, input_size, hidden_size, output_size):
+    def __init__(self, input_size, hidden_size, output_size, layer_num, dp):
         super(LSTM, self).__init__()
 
         self.rnn = nn.LSTM(
             input_size=input_size[0],
             hidden_size=hidden_size,
-            num_layers=3,
+            num_layers=layer_num,
             batch_first=True,
-            dropout=0.2,
+            dropout=dp,
         )
         # self.bn1 = nn.BatchNorm1d(input_size[0], momentum=0.9)
         # self.bn2 = nn.BatchNorm1d(hidden_size, momentum=0.9)
@@ -54,19 +54,17 @@ def main(train_args, TEST_MODE=False):
     # 1. 设置好optimizer
     # 2. 定义好model
     args = {**train_args, **hyperparameters}
-    # TODO: 修改代码，添加Grid Search
-    model = LSTM(args['input_size'], args['hidden_size'], args['gesture_num'])
-    name = args['model'] + '-' + str(args['gesture_num'])
-    sub_folder = 'length-{}'.format(args['seq_length'])
+    model = LSTM(args['input_size'], args['hidden_size'], args['gesture_num'],
+                 args['layer'], args['dropout'])
+    name = args['name']  # + '-dp_test-' + str(args['gesture_num'])
+    sub_folder = args['sub_folder']  # 'dp-{}'.format(args['dropout'])
     tensorboard_cb = config_tensorboard(name, sub_folder, model, (1, 10, 128))
 
     # from emg.utils.lr_scheduler import DecayLR
     # lr_callback = DecayLR(start_lr=0.001, gamma=0.1, step_size=12)
 
     train_set = CapgDataset(gesture=args['gesture_num'],
-                            sequence_len=10,
-                            sequence_result=False,
-                            frame_x=args['frame_input'],
+                            sequence_len=args['seq_length'],
                             test_mode=TEST_MODE,
                             train=True)
 
@@ -83,7 +81,7 @@ def main(train_args, TEST_MODE=False):
     net.fit_with_dataset()
 
     test_set = CapgDataset(gesture=args['gesture_num'],
-                           sequence_len=10,
+                           sequence_len=args['seq_length'],
                            test_mode=TEST_MODE,
                            train=False)
 
@@ -95,8 +93,8 @@ hyperparameters = {
     'input_size': (128,),
     'hidden_size': 256,
     'seq_length': 10,
-    'seq_result': False,
-    'frame_input': False
+    'layer': 3,
+    'dropout': 0.2
 }
 
 
@@ -110,9 +108,23 @@ if __name__ == "__main__":
         'train_batch_size': 256,
         'valid_batch_size': 1024,
         'stop_patience': 7,
-        'log_interval': 100
+        'log_interval': 100,
+        'name': '',
+        'sub_folder': ''
     }
 
-    for i in [1, 1.5, 2, 3, 5]:
-        hyperparameters['seq_length'] = int(10*i)
+    # for i in [10, 15, 20, 30, 50]:
+    #     hyperparameters['seq_length'] = int(i)
+    #     main(test_args, TEST_MODE=False)
+
+    for i in [0.2, 0.3, 0.4, 0.5, 0.6, 0.7]:
+        hyperparameters['dropout'] = i
+        test_args['name'] = 'lstm-dp_test-8'
+        test_args['sub_folder'] = 'dp-{}'.format(i)
+        main(test_args, TEST_MODE=False)
+
+    for i in [1, 2, 3, 4]:
+        hyperparameters['layer'] = i
+        test_args['name'] = 'lstm-layer_test-8'
+        test_args['sub_folder'] = 'layer-{}'.format(i)
         main(test_args, TEST_MODE=False)

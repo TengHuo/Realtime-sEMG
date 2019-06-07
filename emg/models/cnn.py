@@ -96,8 +96,8 @@ def main(train_args, TEST_MODE=False):
     args = train_args
 
     model = CNN(args['gesture_num'])
-    name = args['model'] + '-' + str(args['gesture_num'])
-    sub_folder = 'test4'
+    name = args['model'] + '-compare_gesture'  # + str(args['gesture_num'])
+    sub_folder = 'gesture-{}'.format(args['gesture_num'])
 
     from emg.utils import config_tensorboard
     tensorboard_cb = config_tensorboard(name, sub_folder)  # , model, (1, 1, 16, 8))
@@ -111,7 +111,8 @@ def main(train_args, TEST_MODE=False):
                             test_mode=TEST_MODE,
                             train=True)
 
-    net = EMGClassifier(module=model, model_name=name,
+    net = EMGClassifier(module=model,
+                        model_name=name,
                         sub_folder=sub_folder,
                         hyperparamters=args,
                         optimizer=torch.optim.Adam,
@@ -138,7 +139,7 @@ if __name__ == "__main__":
         'gesture_num': 8,
         'lr': 0.001,
         'lr_step': 5,
-        'epoch': 60,
+        'epoch': 1,
         'train_batch_size': 128,
         'valid_batch_size': 1024,
         'stop_patience': 5,
