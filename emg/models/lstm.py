@@ -93,8 +93,8 @@ hyperparameters = {
     'input_size': (128,),
     'hidden_size': 256,
     'seq_length': 10,
-    'layer': 3,
-    'dropout': 0.2
+    'layer': 2,
+    'dropout': 0.3
 }
 
 
@@ -104,7 +104,7 @@ if __name__ == "__main__":
         'gesture_num': 8,
         'lr': 0.001,
         'lr_step': 5,
-        'epoch': 1,
+        'epoch': 200,
         'train_batch_size': 256,
         'valid_batch_size': 1024,
         'stop_patience': 7,
@@ -113,18 +113,23 @@ if __name__ == "__main__":
         'sub_folder': 'test'
     }
 
+    print()
+    test_args['name'] = 'lstm-dropout'
+    test_args['sub_folder'] = 'dp-{}'.format(0)
+    main(test_args, TEST_MODE=False)
+
     # for i in [10, 15, 20, 30, 50]:
     #     hyperparameters['seq_length'] = int(i)
     #     main(test_args, TEST_MODE=False)
 
-    for i in [0.2, 0.3, 0.4, 0.5, 0.6, 0.7]:
-        hyperparameters['dropout'] = i
-        test_args['name'] = 'lstm-dp_test-8'
-        test_args['sub_folder'] = 'dp-{}'.format(i)
-        main(test_args, TEST_MODE=False)
+    # for i in [0.2, 0.3, 0.4, 0.5, 0.6, 0.7]:
+    #     hyperparameters['dropout'] = i
+    #     test_args['name'] = 'lstm-dropout'
+    #     test_args['sub_folder'] = 'dp-{}'.format(i)
+    #     main(test_args, TEST_MODE=False)
 
-    for i in [1, 2, 3, 4]:
-        hyperparameters['layer'] = i
-        test_args['name'] = 'lstm-layer_test-8'
-        test_args['sub_folder'] = 'layer-{}'.format(i)
-        main(test_args, TEST_MODE=False)
+    # for i in [1, 2, 3, 4]:
+    #     hyperparameters['layer'] = i
+    #     test_args['name'] = 'lstm-layer'
+    #     test_args['sub_folder'] = 'layer-{}'.format(i)
+    #     main(test_args, TEST_MODE=False)

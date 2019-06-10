@@ -24,8 +24,9 @@ from skorch.dataset import CVSplit
 from skorch.utils import is_dataset, noop, to_numpy
 from skorch.utils import train_loss_score, valid_loss_score
 
-from emg.utils import init_parameters, generate_folder, ReportLog, ProgressBar
-from emg.utils.report_logger import save_evaluation
+from emg.utils.tools import init_parameters, generate_folder
+from emg.utils.report_logger import ReportLog, save_evaluation
+from emg.utils.progressbar import ProgressBar
 
 
 class EMGClassifier(NeuralNet):

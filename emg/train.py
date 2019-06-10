@@ -1,6 +1,6 @@
 #!/miniconda3/envs/py36/bin/python
 # -*- coding: UTF-8 -*-
-# app.py
+# train.py
 # @Time     : 15/May/2019
 # @Author   : TENG HUO
 # @Email    : teng_huo@outlook.com

@@ -50,8 +50,8 @@ def main(train_args, TEST_MODE=False):
     # 2. 定义好model
     args = {**train_args, **hyperparameters}
     model = MLP(args['input_size'], args['hidden_size'], args['gesture_num'])
-    name = args['model'] + '-' + str(args['gesture_num'])
-    sub_folder = '200epoch'
+    name = args['name']  # + '-dp_test-' + str(args['gesture_num'])
+    sub_folder = args['sub_folder']  # 'dp-{}'.format(args['dropout'])
 
     tensorboard_cb = config_tensorboard(name, sub_folder, model, (1, 128))
 
@@ -90,11 +90,13 @@ if __name__ == "__main__":
         'gesture_num': 8,
         'lr': 0.001,
         'lr_step': 5,
-        'epoch': 200,
+        'epoch': 1,
         'train_batch_size': 512,
         'valid_batch_size': 2048,
         'stop_patience': 5,
-        'log_interval': 100
+        'log_interval': 100,
+        'name': 'mlp-test',
+        'sub_folder': 'test'
     }
 
     main(test_args, TEST_MODE=False)
