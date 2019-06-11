@@ -66,7 +66,7 @@ class CapgDataset(Dataset):
         train_data_path = os.path.join(processed_data, 'train.h5')
         test_data_path = os.path.join(processed_data, 'test.h5')
         if os.path.isfile(train_data_path) and os.path.isfile(test_data_path):
-            print('data exist, load {} data from the file'.format('train' if train else 'test'))
+            print('processed capg data exist, load {} data from the file'.format('train' if train else 'test'))
             train_set, test_set = _load_capg_from_h5(train_data_path, test_data_path)
         else:
             print('processed capg data not exist, create new h5 files')
