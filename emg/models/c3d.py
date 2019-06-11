@@ -17,10 +17,10 @@ from emg.models.base import EMGClassifier
 from emg.data_loader.capg_data import CapgDataset
 
 
-hyperparameters = {
-    'input_size': (10, 16, 8),
-    'hidden_size': 256
-}
+# hyperparameters = {
+#     'input_size': (10, 16, 8),
+#     'hidden_size': 256
+# }
 
 
 class C3D(nn.Module):
@@ -80,7 +80,7 @@ class C3D(nn.Module):
 def main(train_args, TEST_MODE=False):
     # 1. 设置好optimizer
     # 2. 定义好model
-    args = {**train_args, **hyperparameters}
+    args = train_args  # {**train_args, **hyperparameters}
     model = C3D(args['gesture_num'])
     name = args['name']  # args['model'] + '-' + str(args['gesture_num'])
     sub_folder = args['sub_folder']  # '2layer-conv'
@@ -122,16 +122,16 @@ def main(train_args, TEST_MODE=False):
 if __name__ == "__main__":
     test_args = {
         'model': 'c3d',
-        'gesture_num': 8,
+        'gesture_num': 12,
         'lr': 0.001,
         'lr_step': 5,
-        'epoch': 60,
+        'epoch': 3,
         'train_batch_size': 512,
         'valid_batch_size': 1024,
         'stop_patience': 5,
         'log_interval': 100,
         'name': 'c3d-test',
-        'sub_folder': 'test'
+        'sub_folder': 'test2'
     }
 
     main(test_args, TEST_MODE=False)

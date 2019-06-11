@@ -15,8 +15,9 @@ def init_parameters(m: nn.Module):
                 nn.init.xavier_uniform_(param.data)
             elif 'bias' in name:
                 param.data.fill_(0)
-    elif isinstance(m, nn.Conv2d):
+    elif isinstance(m, nn.Conv2d) or isinstance(m, nn.Conv3d):
         nn.init.kaiming_normal_(m.weight)
+        nn.init.zeros_(m.bias)
 
 
 def generate_folder(root_folder: str, folder_name: str, sub_folder=''):
