@@ -28,7 +28,7 @@
 
 python -m emg.train --model lstm \
                     --suffix regularization \
-                    --sub_folder without \
+                    --sub_folder e-6 \
                     --gesture_num 8 \
                     --lr 0.001 \
                     --epoch 200 \
@@ -36,6 +36,28 @@ python -m emg.train --model lstm \
                     --valid_batch_size 1024 \
                     --stop_patience 12 \
                     --log_interval 100
+
+#python -m emg.train --model lstm \
+#                    --suffix regularization \
+#                    --sub_folder e-4 \
+#                    --gesture_num 8 \
+#                    --lr 0.001 \
+#                    --epoch 200 \
+#                    --train_batch_size 256 \
+#                    --valid_batch_size 1024 \
+#                    --stop_patience 12 \
+#                    --log_interval 100
+#
+#python -m emg.train --model lstm \
+#                    --suffix regularization \
+#                    --sub_folder without \
+#                    --gesture_num 8 \
+#                    --lr 0.001 \
+#                    --epoch 200 \
+#                    --train_batch_size 256 \
+#                    --valid_batch_size 1024 \
+#                    --stop_patience 12 \
+#                    --log_interval 100
 
 ## seq2seq model with bn
 #for((i=8; i <= 20; i++));
