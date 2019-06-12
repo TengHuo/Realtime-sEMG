@@ -73,6 +73,7 @@ def main(train_args, TEST_MODE=False):
                         sub_folder=sub_folder,
                         hyperparamters=args,
                         optimizer=torch.optim.Adam,
+                        optimizer__weight_decay=1e-6,
                         max_epochs=args['epoch'],
                         lr=args['lr'],
                         dataset=train_set,
@@ -114,8 +115,10 @@ if __name__ == "__main__":
     }
 
     print()
-    test_args['name'] = 'lstm-dropout'
-    test_args['sub_folder'] = 'dp-{}'.format(0)
+    test_args['name'] = 'lstm-regularization'
+    test_args['sub_folder'] = 'with-re'
+    # TODO: 1. 取消regularization再跑一次
+    # TODO: 2. 增大regularization
     main(test_args, TEST_MODE=False)
 
     # for i in [10, 15, 20, 30, 50]:
