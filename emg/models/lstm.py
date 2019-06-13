@@ -24,17 +24,18 @@ class LSTM(nn.Module):
         super(LSTM, self).__init__()
 
         self.rnn = nn.LSTM(
-            input_size=input_size[0],
+            input_size=input_size,
             hidden_size=hidden_size,
             num_layers=layer_num,
             batch_first=True,
             dropout=dp,
+            bidirectional=True
         )
-        # self.bn1 = nn.BatchNorm1d(input_size[0], momentum=0.9)
+        # self.bn1 = nn.BatchNorm1d(input_size, momentum=0.9)
         # self.bn2 = nn.BatchNorm1d(hidden_size, momentum=0.9)
-        self.bn3 = nn.BatchNorm1d(hidden_size, momentum=0.9)
+        self.bn3 = nn.BatchNorm1d(hidden_size*2, momentum=0.9)
         # self.fc1 = nn.Linear(hidden_size, hidden_size)
-        self.fc2 = nn.Linear(hidden_size, output_size)
+        self.fc2 = nn.Linear(hidden_size*2, output_size)
 
     def forward(self, x):
         # for i in range(x.size(1)):
@@ -58,10 +59,7 @@ def main(train_args, TEST_MODE=False):
                  args['layer'], args['dropout'])
     name = args['name']  # + '-dp_test-' + str(args['gesture_num'])
     sub_folder = args['sub_folder']  # 'dp-{}'.format(args['dropout'])
-    tensorboard_cb = config_tensorboard(name, sub_folder, model, (1, 10, 128))
-
-    from emg.utils.lr_scheduler import DecayLR
-    lr_callback = DecayLR(start_lr=args['lr'], gamma=0.5, step_size=args['lr_step'])
+    tensorboard_cb = config_tensorboard(name, sub_folder, model, (1, 20, 128))
 
     train_set = CapgDataset(gesture=args['gesture_num'],
                             sequence_len=args['seq_length'],
@@ -77,7 +75,7 @@ def main(train_args, TEST_MODE=False):
                         max_epochs=args['epoch'],
                         lr=args['lr'],
                         dataset=train_set,
-                        callbacks=[tensorboard_cb, lr_callback])
+                        callbacks=[tensorboard_cb])
 
     net.fit_with_dataset()
 
@@ -91,30 +89,27 @@ def main(train_args, TEST_MODE=False):
 
 
 hyperparameters = {
-    'input_size': (128,),
+    'input_size': 128,
     'hidden_size': 256,
     'seq_length': 20,
-    'layer': 2,
-    'dropout': 0.3
+    'layer': 3,
+    'dropout': 0.5
 }
 
 
 if __name__ == "__main__":
     test_args = {
         'model': 'lstm',
+        'name': 'lstm-test',
+        'sub_folder': 'test2',
         'gesture_num': 8,
-        'lr': 0.001,
-        'lr_step': 5,
-        'epoch': 200,
+        'epoch': 1,
         'train_batch_size': 256,
         'valid_batch_size': 1024,
-        'stop_patience': 7,
-        'log_interval': 100,
-        'name': 'lstm-test',
-        'sub_folder': 'test'
+        'lr': 0.001
     }
 
-    main(test_args, TEST_MODE=False)
+    main(test_args, TEST_MODE=True)
 
     # for i in [10, 15, 20, 30, 50]:
     #     hyperparameters['seq_length'] = int(i)

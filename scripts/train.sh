@@ -26,17 +26,15 @@
 #                      --log_interval 100
 #done
 
-python -m emg.train --model lstm \
+python -m emg.train lstm \
                     --suffix adam-compare \
-                    --sub_folder gesture-8 \
+                    --sub_folder 3layer-0.5dp \
                     --gesture_num 8 \
-                    --lr 0.001 \
-                    --lr_step 70 \
                     --epoch 200 \
                     --train_batch_size 256 \
                     --valid_batch_size 1024 \
-                    --stop_patience 12 \
-                    --log_interval 100
+                    --lr 0.001 \
+                    --lr_step 70
 
 #python -m emg.train --model lstm \
 #                    --suffix regularization \
@@ -87,14 +85,14 @@ python -m emg.train --model lstm \
 #                      --log_interval 100
 #done
 
-python -m emg.train mlp \
-                  --suffix test-args \
-                  --sub_folder test \
-                  --gesture_num 8 \
-                  --epoch 4 \
-                  --train_batch_size 512 \
-                  --valid_batch_size 2048 \
-                  --lr 0.001
+#python -m emg.train mlp \
+#                  --suffix test-args \
+#                  --sub_folder test \
+#                  --gesture_num 8 \
+#                  --epoch 4 \
+#                  --train_batch_size 512 \
+#                  --valid_batch_size 2048 \
+#                  --lr 0.001
 
 # c3d model
 #python -m emg.app --model c3d \
