@@ -87,49 +87,14 @@ python -m emg.train --model lstm \
 #                      --log_interval 100
 #done
 
-#python -m emg.train --model mlp \
-#                  --suffix compare-gesture \
-#                  --sub_folder gesture-8 \
-#                  --gesture_num 8 \
-#                  --lr 0.001 \
-#                  --epoch 200 \
-#                  --train_batch_size 256 \
-#                  --valid_batch_size 1024 \
-#                  --stop_patience 12 \
-#                  --log_interval 100
-#
-#python -m emg.train --model mlp \
-#                  --suffix compare-gesture \
-#                  --sub_folder gesture-12 \
-#                  --gesture_num 12 \
-#                  --lr 0.001 \
-#                  --epoch 200 \
-#                  --train_batch_size 256 \
-#                  --valid_batch_size 1024 \
-#                  --stop_patience 12 \
-#                  --log_interval 100
-#
-#python -m emg.train --model mlp \
-#                  --suffix compare-gesture \
-#                  --sub_folder gesture-16 \
-#                  --gesture_num 16 \
-#                  --lr 0.001 \
-#                  --epoch 200 \
-#                  --train_batch_size 256 \
-#                  --valid_batch_size 1024 \
-#                  --stop_patience 12 \
-#                  --log_interval 100
-#
-#python -m emg.train --model mlp \
-#                  --suffix compare-gesture \
-#                  --sub_folder gesture-20 \
-#                  --gesture_num 20 \
-#                  --lr 0.001 \
-#                  --epoch 200 \
-#                  --train_batch_size 256 \
-#                  --valid_batch_size 1024 \
-#                  --stop_patience 12 \
-#                  --log_interval 100
+python -m emg.train mlp \
+                  --suffix test-args \
+                  --sub_folder test \
+                  --gesture_num 8 \
+                  --epoch 4 \
+                  --train_batch_size 512 \
+                  --valid_batch_size 2048 \
+                  --lr 0.001
 
 # c3d model
 #python -m emg.app --model c3d \

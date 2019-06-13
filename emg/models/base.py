@@ -26,6 +26,7 @@ from skorch.utils import train_loss_score, valid_loss_score
 
 from emg.utils.tools import init_parameters, generate_folder
 from emg.utils.report_logger import ReportLog, save_evaluation
+from emg.utils.lr_scheduler import DecayLR
 from emg.utils.progressbar import ProgressBar
 
 
@@ -68,7 +69,7 @@ class EMGClassifier(NeuralNet):
 
     @property
     def _default_callbacks(self):
-        return [
+        default_cb_list = [
             ('epoch_timer', EpochTimer()),
             ('train_loss', BatchScoring(
                 train_loss_score,
@@ -87,12 +88,26 @@ class EMGClassifier(NeuralNet):
                 dirname=self.model_path)),
             ('end_checkpoint', TrainEndCheckpoint(
                 dirname=self.model_path)),
-            # ('earlystop',  EarlyStopping(
-            #     patience=self.patience,
-            #     threshold=1e-4)),
             ('report', ReportLog()),
             ('progressbar', ProgressBar())
         ]
+
+        if 'stop_patience' in self.hyperparamters.keys() and \
+                self.hyperparamters['stop_patience']:
+            earlystop_cb = ('earlystop',  EarlyStopping(
+                            patience=self.patience,
+                            threshold=1e-4))
+            default_cb_list.append(earlystop_cb)
+
+        if 'lr_step' in self.hyperparamters.keys() and \
+                self.hyperparamters['lr_step']:
+            lr_callback = ('lr_schedule', DecayLR(
+                           self.hyperparamters['lr'],
+                           self.hyperparamters['lr_step'],
+                           gamma=0.5))
+            default_cb_list.append(lr_callback)
+
+        return default_cb_list
 
     # pylint: disable=signature-differs
     # def check_data(self, X, y):
