@@ -61,7 +61,7 @@ def main(train_args, TEST_MODE=False):
     tensorboard_cb = config_tensorboard(name, sub_folder, model, (1, 10, 128))
 
     from emg.utils.lr_scheduler import DecayLR
-    lr_callback = DecayLR(start_lr=args['lr'], gamma=0.5, step_size=20)
+    lr_callback = DecayLR(start_lr=args['lr'], gamma=0.5, step_size=args['lr_step'])
 
     train_set = CapgDataset(gesture=args['gesture_num'],
                             sequence_len=args['seq_length'],
@@ -73,8 +73,8 @@ def main(train_args, TEST_MODE=False):
                         sub_folder=sub_folder,
                         hyperparamters=args,
                         optimizer=torch.optim.SGD,
-                        optimizer__momentum=0.9,
-                        optimizer__weight_decay=1e-4,
+                        optimizer__momentum=0.95,
+                        optimizer__weight_decay=1e-5,
                         max_epochs=args['epoch'],
                         lr=args['lr'],
                         dataset=train_set,

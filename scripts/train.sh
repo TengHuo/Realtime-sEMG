@@ -14,16 +14,88 @@
 #done
 
 python -m emg.train --model lstm \
-                    --suffix sgd \
-                    --sub_folder momentum-0.9 \
+                    --suffix sgd-compare \
+                    --sub_folder gesture-8 \
                     --gesture_num 8 \
-                    --lr 0.01 \
-                    --epoch 200 \
+                    --lr 0.05 \
+                    --lr_step 100 \
+                    --epoch 500 \
                     --train_batch_size 256 \
                     --valid_batch_size 1024 \
                     --stop_patience 12 \
                     --log_interval 100
 
+python -m emg.train --model lstm \
+                    --suffix sgd-compare \
+                    --sub_folder gesture-10 \
+                    --gesture_num 10 \
+                    --lr 0.05 \
+                    --lr_step 100 \
+                    --epoch 500 \
+                    --train_batch_size 256 \
+                    --valid_batch_size 1024 \
+                    --stop_patience 12 \
+                    --log_interval 100
+
+python -m emg.train --model lstm \
+                    --suffix sgd-compare \
+                    --sub_folder gesture-12 \
+                    --gesture_num 12 \
+                    --lr 0.05 \
+                    --lr_step 100 \
+                    --epoch 500 \
+                    --train_batch_size 256 \
+                    --valid_batch_size 1024 \
+                    --stop_patience 12 \
+                    --log_interval 100
+
+python -m emg.train --model lstm \
+                    --suffix sgd-compare \
+                    --sub_folder gesture-14 \
+                    --gesture_num 14 \
+                    --lr 0.05 \
+                    --lr_step 100 \
+                    --epoch 500 \
+                    --train_batch_size 256 \
+                    --valid_batch_size 1024 \
+                    --stop_patience 12 \
+                    --log_interval 100
+
+python -m emg.train --model lstm \
+                    --suffix sgd-compare \
+                    --sub_folder gesture-16 \
+                    --gesture_num 16 \
+                    --lr 0.05 \
+                    --lr_step 100 \
+                    --epoch 500 \
+                    --train_batch_size 256 \
+                    --valid_batch_size 1024 \
+                    --stop_patience 12 \
+                    --log_interval 100
+
+python -m emg.train --model lstm \
+                    --suffix sgd-compare \
+                    --sub_folder gesture-18 \
+                    --gesture_num 18 \
+                    --lr 0.05 \
+                    --lr_step 100 \
+                    --epoch 500 \
+                    --train_batch_size 256 \
+                    --valid_batch_size 1024 \
+                    --stop_patience 12 \
+                    --log_interval 100
+
+python -m emg.train --model lstm \
+                    --suffix sgd-compare \
+                    --sub_folder gesture-20 \
+                    --gesture_num 20 \
+                    --lr 0.05 \
+                    --lr_step 100 \
+                    --epoch 500 \
+                    --train_batch_size 256 \
+                    --valid_batch_size 1024 \
+                    --stop_patience 12 \
+                    --log_interval 100
 
 # lstm model
 #for((i=8; i <= 20; i++));
@@ -38,19 +110,18 @@ python -m emg.train --model lstm \
 #                      --log_interval 100
 #done
 
-## seq2seq model with bn
-#for((i=8; i <= 20; i++));
-#do
-#    python -m emg.app --model seq2seq \
-#                      --gesture_num $i \
-#                      --lr 0.001 \
-#                      --epoch 60 \
-#                      --train_batch_size 256 \
-#                      --val_batch_size 1024 \
-#                      --stop_patience 7 \
-#                      --log_interval 100 \
-#                      --load_model False
-#done
+## seq2seq model
+#python -m emg.train --model seq2seq \
+#                    --suffix default \
+#                    --sub_folder default \
+#                    --gesture_num 8 \
+#                    --lr 0.001 \
+#                    --lr_step 80 \
+#                    --epoch 300 \
+#                    --train_batch_size 256 \
+#                    --valid_batch_size 1024 \
+#                    --stop_patience 12 \
+#                    --log_interval 100
 
 # mlp model, mainly used for test code
 #for((i=8; i <= 20; i++));
