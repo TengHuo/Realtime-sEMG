@@ -91,7 +91,7 @@ class ReportLog(Callback):
                 for batch_info in history_batch:
                     batch_step += 1
                     if 'train_loss' in batch_info and \
-                            batch_step % net.hyperparamters['log_interval'] == 1:
+                            batch_step % 100 == 1:  # save loss every 100 iterations
                         train_history.append([batch_step, batch_info['train_loss']])
             else:
                 # train is interrupted, validation hasn't been run , don't record this epoch

@@ -18,19 +18,13 @@ from emg.utils import config_tensorboard
 from emg.data_loader.capg_data import CapgDataset
 
 
-hyperparameters = {
-    'input_size': (128,),
-    'hidden_size': 256
-}
-
-
 class MLP(nn.Module):
     def __init__(self, input_size, hidden_size, output_size):
         super(MLP, self).__init__()
         # an affine operation: y = Wx + b
-        self.bn1 = nn.BatchNorm1d(input_size[0])
+        self.bn1 = nn.BatchNorm1d(input_size)
         self.bn2 = nn.BatchNorm1d(hidden_size)
-        self.fc1 = nn.Linear(input_size[0], hidden_size)
+        self.fc1 = nn.Linear(input_size, hidden_size)
         self.fc2 = nn.Linear(hidden_size, hidden_size)
         self.fc3 = nn.Linear(hidden_size, output_size)
 
@@ -45,6 +39,12 @@ class MLP(nn.Module):
         return x
 
 
+hyperparameters = {
+    'input_size': 128,
+    'hidden_size': 256
+}
+
+
 def main(train_args, TEST_MODE=False):
     # 1. 设置好optimizer
     # 2. 定义好model
@@ -54,9 +54,6 @@ def main(train_args, TEST_MODE=False):
     sub_folder = args['sub_folder']  # 'dp-{}'.format(args['dropout'])
 
     tensorboard_cb = config_tensorboard(name, sub_folder, model, (1, 128))
-
-    # from emg.utils.lr_scheduler import DecayLR
-    # lr_callback = DecayLR(start_lr=0.001, gamma=0.1, step_size=12)
 
     train_set = CapgDataset(gesture=args['gesture_num'],
                             sequence_len=1,
@@ -87,16 +84,14 @@ def main(train_args, TEST_MODE=False):
 if __name__ == "__main__":
     test_args = {
         'model': 'mlp',
+        'suffix': 'test-args',
+        'sub_folder': 'test5',
         'gesture_num': 8,
-        'lr': 0.001,
-        'lr_step': 5,
         'epoch': 1,
         'train_batch_size': 512,
         'valid_batch_size': 2048,
-        'stop_patience': 5,
-        'log_interval': 100,
-        'name': 'mlp-test',
-        'sub_folder': 'test'
-    }
+        'lr': 0.001}
 
-    main(test_args, TEST_MODE=False)
+    default_name = test_args['model'] + '-{}'.format(test_args['suffix'])
+    test_args['name'] = default_name
+    main(test_args, TEST_MODE=True)

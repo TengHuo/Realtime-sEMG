@@ -18,7 +18,7 @@ class DecayLR(Callback):
 
         """
 
-    def __init__(self, start_lr=0.001, gamma=0.1, step_size=10):
+    def __init__(self, start_lr, step_size, gamma):
         self.lr = start_lr
         self.gamma = gamma
         self.step_size = step_size
