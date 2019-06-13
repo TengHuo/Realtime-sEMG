@@ -27,10 +27,11 @@
 #done
 
 python -m emg.train --model lstm \
-                    --suffix regularization \
-                    --sub_folder e-5 \
+                    --suffix adam-compare \
+                    --sub_folder gesture-8 \
                     --gesture_num 8 \
                     --lr 0.001 \
+                    --lr_step 70 \
                     --epoch 200 \
                     --train_batch_size 256 \
                     --valid_batch_size 1024 \

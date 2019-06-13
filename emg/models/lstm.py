@@ -60,8 +60,8 @@ def main(train_args, TEST_MODE=False):
     sub_folder = args['sub_folder']  # 'dp-{}'.format(args['dropout'])
     tensorboard_cb = config_tensorboard(name, sub_folder, model, (1, 10, 128))
 
-    # from emg.utils.lr_scheduler import DecayLR
-    # lr_callback = DecayLR(start_lr=0.001, gamma=0.1, step_size=12)
+    from emg.utils.lr_scheduler import DecayLR
+    lr_callback = DecayLR(start_lr=args['lr'], gamma=0.5, step_size=args['lr_step'])
 
     train_set = CapgDataset(gesture=args['gesture_num'],
                             sequence_len=args['seq_length'],
@@ -77,7 +77,7 @@ def main(train_args, TEST_MODE=False):
                         max_epochs=args['epoch'],
                         lr=args['lr'],
                         dataset=train_set,
-                        callbacks=[tensorboard_cb])
+                        callbacks=[tensorboard_cb, lr_callback])
 
     net.fit_with_dataset()
 
@@ -93,7 +93,7 @@ def main(train_args, TEST_MODE=False):
 hyperparameters = {
     'input_size': (128,),
     'hidden_size': 256,
-    'seq_length': 10,
+    'seq_length': 20,
     'layer': 2,
     'dropout': 0.3
 }
