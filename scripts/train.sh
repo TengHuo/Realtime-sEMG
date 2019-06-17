@@ -28,8 +28,68 @@
 
 python -m emg.train lstm \
                     --suffix adam-compare \
-                    --sub_folder 3layer-0.5dp \
+                    --sub_folder gesture-8 \
                     --gesture_num 8 \
+                    --epoch 200 \
+                    --train_batch_size 256 \
+                    --valid_batch_size 1024 \
+                    --lr 0.001 \
+                    --lr_step 70
+
+python -m emg.train lstm \
+                    --suffix adam-compare \
+                    --sub_folder gesture-10 \
+                    --gesture_num 10 \
+                    --epoch 200 \
+                    --train_batch_size 256 \
+                    --valid_batch_size 1024 \
+                    --lr 0.001 \
+                    --lr_step 70
+
+python -m emg.train lstm \
+                    --suffix adam-compare \
+                    --sub_folder gesture-12 \
+                    --gesture_num 12 \
+                    --epoch 200 \
+                    --train_batch_size 256 \
+                    --valid_batch_size 1024 \
+                    --lr 0.001 \
+                    --lr_step 70
+
+python -m emg.train lstm \
+                    --suffix adam-compare \
+                    --sub_folder gesture-14 \
+                    --gesture_num 14 \
+                    --epoch 200 \
+                    --train_batch_size 256 \
+                    --valid_batch_size 1024 \
+                    --lr 0.001 \
+                    --lr_step 70
+
+python -m emg.train lstm \
+                    --suffix adam-compare \
+                    --sub_folder gesture-16 \
+                    --gesture_num 16 \
+                    --epoch 200 \
+                    --train_batch_size 256 \
+                    --valid_batch_size 1024 \
+                    --lr 0.001 \
+                    --lr_step 70
+
+python -m emg.train lstm \
+                    --suffix adam-compare \
+                    --sub_folder gesture-18 \
+                    --gesture_num 18 \
+                    --epoch 200 \
+                    --train_batch_size 256 \
+                    --valid_batch_size 1024 \
+                    --lr 0.001 \
+                    --lr_step 70
+
+python -m emg.train lstm \
+                    --suffix adam-compare \
+                    --sub_folder gesture-20 \
+                    --gesture_num 20 \
                     --epoch 200 \
                     --train_batch_size 256 \
                     --valid_batch_size 1024 \

@@ -29,13 +29,13 @@ class LSTM(nn.Module):
             num_layers=layer_num,
             batch_first=True,
             dropout=dp,
-            bidirectional=True
+            bidirectional=False
         )
         # self.bn1 = nn.BatchNorm1d(input_size, momentum=0.9)
         # self.bn2 = nn.BatchNorm1d(hidden_size, momentum=0.9)
-        self.bn3 = nn.BatchNorm1d(hidden_size*2, momentum=0.9)
+        self.bn3 = nn.BatchNorm1d(hidden_size, momentum=0.9)
         # self.fc1 = nn.Linear(hidden_size, hidden_size)
-        self.fc2 = nn.Linear(hidden_size*2, output_size)
+        self.fc2 = nn.Linear(hidden_size, output_size)
 
     def forward(self, x):
         # for i in range(x.size(1)):
@@ -47,7 +47,7 @@ class LSTM(nn.Module):
         # x = self.fc1(F.relu(x))
         x = self.bn3(x)
         x = self.fc2(F.relu(x))
-        x = F.dropout(x, p=0.2, training=self.training)
+        x = F.dropout(x, p=0.5, training=self.training)
         return x
 
 

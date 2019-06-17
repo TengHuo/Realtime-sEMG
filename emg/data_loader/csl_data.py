@@ -16,6 +16,8 @@ import pandas as pd
 from torch.utils.data import DataLoader, Dataset
 from scipy.io import loadmat
 import numpy as np
+from scipy.ndimage.filters import median_filter
+from scipy.signal import butter, lfilter
 
 
 # def default_csl_loaders(model_args: dict):
@@ -43,15 +45,69 @@ import numpy as np
 #     return train_loader, val_loader
 
 
+def butter_bandpass_filter(emg_data, lowcut, highcut, fs, order):
+    nyq = 0.5 * fs
+    low = lowcut / nyq
+    high = highcut / nyq
+
+    b, a = butter(order, [low, high], btype='bandpass')
+    y = lfilter(b, a, emg_data)
+    return y
+
+
+def continuous_segments(label):
+    label = np.asarray(label)
+
+    if not len(label):
+        return
+
+    breaks = list(np.where(label[:-1] != label[1:])[0] + 1)
+    for begin, end in zip([0] + breaks, breaks + [len(label)]):
+        assert begin < end
+        yield begin, end
+
+
+def csl_cut(emg_data, framerate):
+    window = int(np.round(150 * framerate / 2048))
+    emg_data = emg_data[:len(emg_data) // window * window].reshape(-1, 150, emg_data.shape[1])
+    rms = np.sqrt(np.mean(np.square(emg_data), axis=1))
+    rms = [median_filter(image, 3).ravel() for image in rms.reshape(-1, 24, 7)]
+    rms = np.mean(rms, axis=1)
+    threshold = np.mean(rms)
+    mask = rms > threshold
+    for i in range(1, len(mask) - 1):
+        if not mask[i] and mask[i - 1] and mask[i + 1]:
+            mask[i] = True
+    begin, end = max(continuous_segments(mask),
+                     key=lambda s: (mask[s[0]], s[1] - s[0]))
+    return begin * window, end * window
+
+
+def csl_preprocess(trial):
+    trial = np.delete(trial, np.s_[7:192:8], 0)
+    trial = trial.T
+
+    # bandpass
+    trial = np.transpose([butter_bandpass_filter(ch, 20, 400, 2048, 4) for ch in trial.T])
+    # cut
+    begin, end = csl_cut(trial, 2048)
+    # print(begin, end)
+    trial = trial[begin:end]
+    # median filter
+    trial = np.array([median_filter(image, 3).ravel() for image in trial.reshape(-1, 24, 7)])
+    return trial
+
+
 class CSLDataset(Dataset):
     """An abstract class representing a Dataset.
     """
 
-    def __init__(self, train=True, test_mode=False, transform=None):
+    def __init__(self, sequence_len, train=True, test_mode=False, transform=None):
 
         self.transform = transform
         self.train = train
         self.scale = 100
+        self.seq_length = sequence_len
 
         root_path = os.path.join(os.sep, *os.path.dirname(os.path.realpath(__file__)).split(os.sep)[:-2])
         processed_data = os.path.join(root_path, 'data', 'csl-processed')
@@ -93,24 +149,11 @@ class CSLDataset(Dataset):
         x_path = x_path[0:-1]
 
         mat = loadmat(x_path)
-        mat = mat['gestures'][x_index][0]
-        x = mat.T
-
-        # x.shape is (1000, 128)
-        # start = np.random.randint(0, 1000 - self.seq_length)
-        # end = start + self.seq_length
-        # x = x[start:end]  # now x.shape is (N, 128)
-
-        # if self.frame_x:
-        #     # x shape is (N, 128), reshape to frame format: (N, 16, 8)
-        #     if self.seq_length == 1:
-        #         # used for 2d cnn
-        #         x = x.reshape((1, 16, 8))
-        #     else:
-        #         # used for 3d cnn
-        #         x = x.reshape((1, x.shape[0], 16, 8))
-        # elif self.seq_length == 1:
-        #     x = x[0]
+        x = mat['gestures'][x_index][0]
+        x = csl_preprocess(x)
+        start = np.random.randint(0, x.shape[1] - self.seq_length)
+        end = start + self.seq_length
+        x = x[start:end]
 
         if self.transform is not None:
             x = self.transform(x)
@@ -242,16 +285,16 @@ if __name__ == '__main__':
     #                         frame_x=False, train=False, transform=None)
     # print(test_data.data.shape)
     # print(test_data.targets.shape)
-    test_data = CSLDataset()
+    test_data = CSLDataset(sequence_len=10)
     train_loader = DataLoader(test_data,
-                              batch_size=1,
-                              num_workers=4,
+                              batch_size=128,
+                              num_workers=12,
                               shuffle=True)
 
+    len_set = set()
     for batch_idx, (data, target) in enumerate(train_loader):
         print(batch_idx)
         print(data.size())
         print(target)
-        break
-
-    print()
+        len_set.add(data.size(1))
+    print(len_set)
