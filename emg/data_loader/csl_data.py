@@ -18,6 +18,7 @@ from scipy.io import loadmat
 import numpy as np
 from scipy.ndimage.filters import median_filter
 from scipy.signal import butter, lfilter
+from multiprocessing import Pool
 
 
 # def default_csl_loaders(model_args: dict):
@@ -118,7 +119,7 @@ class CSLDataset(Dataset):
             train_set, test_set = _load_csl_from_csv(train_data_path, test_data_path)
         else:
             print('processed csl data not exist, create new h5 files')
-            # os.mkdir(processed_data)
+            os.mkdir(processed_data)
             csl_data = _load_csl_all()
             train_set, test_set = _csl_train_test_split(csl_data, test_size=0.1)
             _save_csl_to_csv(train_set, test_set, train_data_path, test_data_path)
@@ -171,6 +172,7 @@ def _csl_train_test_split(raw_data: dict, test_size=0.1):
     for i in raw_data.keys():
         length = len(raw_data[i])
         test_index = np.random.choice(length, int(length*test_size), replace=False)
+        # TODO: 需要修改
         train_index = np.delete(np.arange(length), test_index)
         np_data = np.array(raw_data[i])
         test_set[i] = np_data[test_index].tolist()
@@ -214,20 +216,35 @@ def _prepare_data(data_set: dict, gesture_list):
 
 def _load_csl_all():
     subjects = ['subject1', 'subject2', 'subject3', 'subject4', 'subject5']
-    csl_data = {}
+    csl_files = []
     for s in subjects:
-        subject_data = _load_csl_data(s)
-        csl_data = _merge_data(csl_data, subject_data)
+        files_list = _load_csl_files(s)
+        csl_files += files_list
 
-    return csl_data
+    import time
+    t1 = time.time()
+    with Pool() as pool:
+        csl_data = pool.map(_read_one_mat_file, csl_files)
+    t2 = time.time()
+    print('running time: ', int(t2 - t1))
+    csl_data_dict = {}
+    for gesture_data in csl_data:
+        gesture = gesture_data[0]
+        data_list = gesture_data[1]
+        if gesture not in csl_data_dict.keys():
+            csl_data_dict[gesture] = []
+        csl_data_dict[gesture] += data_list
+
+    return csl_data_dict
 
 
-def _load_csl_data(subject: str) -> dict:
+def _load_csl_files(subject: str) -> list:
+    """load file name as a list"""
     # get the parent dir path
     now_path = os.path.join(os.sep, *os.path.dirname(os.path.realpath(__file__)).split(os.sep)[:-2])
     data_path = os.path.join(now_path, 'data', 'csl', subject)
     session_list = os.listdir(data_path)
-    subject_data = {}
+    subject_files = []
     for session_folder in session_list:
         if not re.match(r'', session_folder, flags=0):
             # it is not session folders
@@ -235,25 +252,19 @@ def _load_csl_data(subject: str) -> dict:
         else:
             sess_path = os.path.join(data_path, session_folder)
             mat_files = os.listdir(sess_path)
-            one_session_data = _read_csl_mat_files(sess_path, mat_files)
-            subject_data = _merge_data(subject_data, one_session_data)
+            one_session_files = _read_csl_mat_files(sess_path, mat_files)
+            subject_files += one_session_files
 
-    return subject_data
+    return subject_files
 
 
-def _read_csl_mat_files(path: str, mat_list: list) -> dict:
-    mat_data = dict()
+def _read_csl_mat_files(session_path: str, mat_list: list) -> list:
+    mat_files = []
 
     for mat_name in mat_list:
-        if not re.match(r'\S*[.]mat$', mat_name, flags=0):
-            continue
-        mat_path = os.path.join(path, mat_name)
-        for i in range(10):
-            file_path = mat_path + '{:d}'.format(i)
-            if mat_name not in mat_data.keys():
-                mat_data[mat_name] = list()
-            mat_data[mat_name].append(file_path)
-    return mat_data
+        mat_path = os.path.join(session_path, mat_name)
+        mat_files.append((mat_name, mat_path))
+    return mat_files
 
 
 def _merge_data(data_a: dict, data_b: dict) -> dict:
@@ -266,6 +277,20 @@ def _merge_data(data_a: dict, data_b: dict) -> dict:
             emg_data[g] += data_b[g]
 
     return emg_data
+
+
+def _read_one_mat_file(file_tuple):
+    file_name, file_path = file_tuple
+    mat = loadmat(file_path)
+    trials = mat['gestures']
+    data_list = []
+    for i in range(trials.shape[0]):
+        one_trial = trials[i, 0]
+        one_trial = csl_preprocess(one_trial)
+        data_list.append(one_trial)
+
+    res = (file_name, data_list)
+    return res
 
 
 if __name__ == '__main__':
@@ -285,16 +310,11 @@ if __name__ == '__main__':
     #                         frame_x=False, train=False, transform=None)
     # print(test_data.data.shape)
     # print(test_data.targets.shape)
-    test_data = CSLDataset(sequence_len=10)
-    train_loader = DataLoader(test_data,
-                              batch_size=128,
-                              num_workers=12,
-                              shuffle=True)
+    # TODO: 需要写一个将raw data预处理一遍的函数
+    # 将数据处理为和capg一样的格式存到h5文件中
+    # {gesture1: [ndarray], gesture2: [ndarray]}
+    # csl_tra
 
-    len_set = set()
-    for batch_idx, (data, target) in enumerate(train_loader):
-        print(batch_idx)
-        print(data.size())
-        print(target)
-        len_set.add(data.size(1))
-    print(len_set)
+    test = _load_csl_all()
+    print()
+
