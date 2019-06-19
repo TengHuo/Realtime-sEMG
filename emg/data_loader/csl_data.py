@@ -11,7 +11,7 @@
 import os
 import re
 import math
-import pandas as pd
+import h5py
 
 from torch.utils.data import DataLoader, Dataset
 from scipy.io import loadmat
@@ -103,33 +103,30 @@ class CSLDataset(Dataset):
     """An abstract class representing a Dataset.
     """
 
-    def __init__(self, sequence_len, train=True, test_mode=False, transform=None):
+    def __init__(self, gesture, sequence_len, train,
+                 test_mode=False, transform=None):
 
         self.transform = transform
         self.train = train
         self.scale = 100
         self.seq_length = sequence_len
+        gestures = map(lambda i: 'gest{}'.format(i), range(gesture))  # from gest0 to gestX
 
         root_path = os.path.join(os.sep, *os.path.dirname(os.path.realpath(__file__)).split(os.sep)[:-2])
-        processed_data = os.path.join(root_path, 'data', 'csl-processed')
-        train_data_path = os.path.join(processed_data, 'train.csv')
-        test_data_path = os.path.join(processed_data, 'test.csv')
-        if os.path.isfile(train_data_path) and os.path.isfile(test_data_path):
+        processed_data_folder = os.path.join(root_path, 'data', 'csl-processed')
+        if os.path.isdir(processed_data_folder):
             print('processed csl data exist, load {} data from the file'.format('train' if train else 'test'))
-            train_set, test_set = _load_csl_from_csv(train_data_path, test_data_path)
+            data_set = _load_capg_from_h5(processed_data_folder, self.train, gestures)
         else:
             print('processed csl data not exist, create new h5 files')
-            os.mkdir(processed_data)
+            os.mkdir(processed_data_folder)
             csl_data = _load_csl_all()
             train_set, test_set = _csl_train_test_split(csl_data, test_size=0.1)
-            _save_csl_to_csv(train_set, test_set, train_data_path, test_data_path)
+            train_data_path = os.path.join(processed_data_folder, 'train_')
+            test_data_path = os.path.join(processed_data_folder, 'test_')
+            data_set = _save_csl_to_h5(train_set, test_set, train_data_path, test_data_path, self.train, gestures)
 
-        gestures = ['gest0.mat', 'gest1.mat', 'gest2.mat', 'gest3.mat', 'gest4.mat']
-        if self.train:
-            X, y = _prepare_data(train_set, gesture_list=gestures)
-        else:
-            X, y = _prepare_data(test_set, gesture_list=gestures)
-
+        X, y = _prepare_data(data_set)
         if test_mode and self.train:
             # for test code, only use small part of data
             self.data, self.targets = X[:64], y[:64]
@@ -145,13 +142,7 @@ class CSLDataset(Dataset):
             tuple: (X, target) where target is index of the target class.
         """
         true_index = math.floor(index / self.scale)
-        x_path = self.data[true_index]
-        x_index = int(x_path[-1])
-        x_path = x_path[0:-1]
-
-        mat = loadmat(x_path)
-        x = mat['gestures'][x_index][0]
-        x = csl_preprocess(x)
+        x = self.data[true_index]
         start = np.random.randint(0, x.shape[1] - self.seq_length)
         end = start + self.seq_length
         x = x[start:end]
@@ -162,55 +153,82 @@ class CSLDataset(Dataset):
         return x, y
 
     def __len__(self):
-        return self.targets.shape[0] * self.scale
+        return len(self.targets) * self.scale
 
 
-def _csl_train_test_split(raw_data: dict, test_size=0.1):
+def _csl_train_test_split(csl_data_dict: dict, test_size=0.1):
     train_set = dict()
     test_set = dict()
 
-    for i in raw_data.keys():
-        length = len(raw_data[i])
+    for gesture in csl_data_dict.keys():
+        data_list = csl_data_dict[gesture]
+        length = len(data_list)
         test_index = np.random.choice(length, int(length*test_size), replace=False)
-        # TODO: 需要修改
-        train_index = np.delete(np.arange(length), test_index)
-        np_data = np.array(raw_data[i])
-        test_set[i] = np_data[test_index].tolist()
-        train_set[i] = np_data[train_index].tolist()
+        train_set[gesture] = []
+        test_set[gesture] = []
+        for i in range(length):
+            if i in test_index:
+                test_set[gesture].append(data_list[i])
+            else:
+                train_set[gesture].append(data_list[i])
 
     return train_set, test_set
 
 
-def _save_csl_to_csv(train_set: dict, test_set: dict, train_file_path, test_file_path):
-    train_df = pd.DataFrame.from_dict(train_set)
-    train_df.to_csv(train_file_path, index=False)
-
-    test_df = pd.DataFrame.from_dict(test_set)
-    test_df.to_csv(test_file_path, index=False)
-
-
-def _load_csl_from_csv(train_file_path, test_file_path):
-    train_df = pd.read_csv(train_file_path)
-    train_set = train_df.to_dict(orient='list')
-
-    test_df = pd.read_csv(test_file_path)
-    test_set = test_df.to_dict(orient='list')
-
-    return train_set, test_set
+def _save_csl_to_h5(train_set: dict, test_set: dict, train_file_path, test_file_path,
+                    train, gestures):
+    _save_h5_file(train_set, train_file_path, 'train')
+    _save_h5_file(test_set, test_file_path, 'test')
+    if train:
+        required_data = train_set
+    else:
+        required_data = test_set
+    data_set = {}
+    for g in gestures:
+        data_set[g] = required_data[g]
+    return data_set
 
 
-def _prepare_data(data_set: dict, gesture_list):
+def _save_h5_file(data_set, folder_path, grp_name):
+    for gesture in data_set.keys():
+        file_path = folder_path + '{}.h5'.format(gesture)
+        with h5py.File(file_path, 'w') as h5_file:
+            train_grp = h5_file.create_group(grp_name)
+            for i, emg_data in enumerate(data_set[gesture]):
+                train_grp.create_dataset(str(i), data=emg_data)
+
+
+def _load_capg_from_h5(data_folder: str, train: bool, gestures):
+    data_set = {}
+    data_grp = 'train' if train else 'test'
+    for g in gestures:
+        file_path = os.path.join(data_folder, '{}_{}.h5'.format(data_grp, g))
+        data_set[g] = _load_h5_file(file_path, data_grp)
+
+    return data_set
+
+
+def _load_h5_file(file_path, grp):
+    data_list = []
+    with h5py.File(file_path, 'r') as h5_file:
+        data_grp = h5_file[grp]
+        for i in data_grp.keys():
+            data_list.append(data_grp[i][:])
+
+    return data_list
+
+
+def _prepare_data(data_set: dict):
     """convert the data from raw data to numpy array
     """
     X = list()
     y = list()
-    for i in range(len(gesture_list)):
-        gesture = gesture_list[i]
-        amount = len(data_set[gesture])
-        X += data_set[gesture]
+    for i, g in enumerate(data_set.keys()):
+        data_list = data_set[g]
+        amount = len(data_list)
+        X += data_list
         y += [i for _ in range(amount)]
 
-    y = np.asarray(y, dtype=np.int)
     return X, y
 
 
@@ -246,8 +264,8 @@ def _load_csl_files(subject: str) -> list:
     session_list = os.listdir(data_path)
     subject_files = []
     for session_folder in session_list:
-        if not re.match(r'', session_folder, flags=0):
-            # it is not session folders
+        if not re.match(r'session[0-9]', session_folder, flags=0):
+            # it is not a session folder
             continue
         else:
             sess_path = os.path.join(data_path, session_folder)
@@ -263,6 +281,7 @@ def _read_csl_mat_files(session_path: str, mat_list: list) -> list:
 
     for mat_name in mat_list:
         mat_path = os.path.join(session_path, mat_name)
+        mat_name = mat_name[0:-4]  # extract name from gest1.mat to gest1
         mat_files.append((mat_name, mat_path))
     return mat_files
 
@@ -300,21 +319,20 @@ if __name__ == '__main__':
     # 2. 在csl的部分数据上训练模型
     # 3. 用剩余subject的数据测试模型
 
-    # # test pytorch data loader
-    # train_data = CSLDataset(gesture=8, sequence_len=10, sequence_result=False,
-    #                          frame_x=False, train=True, transform=None)
-    # print(train_data.data.shape)
-    # print(train_data.targets.shape)
-    #
-    # test_data = CSLDataset(gesture=8, sequence_len=10, sequence_result=False,
-    #                         frame_x=False, train=False, transform=None)
-    # print(test_data.data.shape)
-    # print(test_data.targets.shape)
-    # TODO: 需要写一个将raw data预处理一遍的函数
-    # 将数据处理为和capg一样的格式存到h5文件中
-    # {gesture1: [ndarray], gesture2: [ndarray]}
-    # csl_tra
+    # test pytorch data loader
+    csl_train_data = CSLDataset(gesture=8, sequence_len=10, train=True)
+    print(len(csl_train_data.data))
+    print(len(csl_train_data.targets))
 
-    test = _load_csl_all()
-    print()
+    dataloader = DataLoader(csl_train_data, batch_size=1,
+                            shuffle=True, num_workers=4)
 
+    for i_batch, data in enumerate(dataloader):
+        print(i_batch)
+        print(data[0].size())
+        print(data[1])
+        break
+
+    csl_test_data = CSLDataset(gesture=8, sequence_len=10, train=False)
+    print(len(csl_test_data.data))
+    print(len(csl_test_data.targets))

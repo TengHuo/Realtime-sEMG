@@ -176,7 +176,6 @@ def _load_capg_from_h5(train_file_path, test_file_path):
     with h5py.File(train_file_path, 'r') as train_file:
         train_set = dict()
         train_grp = train_file['train']
-        print()
         for i in train_grp.keys():
             train_set[int(i)] = train_grp[i][()]
 
