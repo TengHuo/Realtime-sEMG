@@ -16,9 +16,9 @@ import h5py
 from torch.utils.data import DataLoader, Dataset
 from scipy.io import loadmat
 import numpy as np
-from scipy.ndimage.filters import median_filter
-from scipy.signal import butter, lfilter
+
 from multiprocessing import Pool
+from emg.data_loader.preprocess import csl_preprocess
 
 
 # def default_csl_loaders(model_args: dict):
@@ -46,59 +46,6 @@ from multiprocessing import Pool
 #     return train_loader, val_loader
 
 
-def butter_bandpass_filter(emg_data, lowcut, highcut, fs, order):
-    nyq = 0.5 * fs
-    low = lowcut / nyq
-    high = highcut / nyq
-
-    b, a = butter(order, [low, high], btype='bandpass')
-    y = lfilter(b, a, emg_data)
-    return y
-
-
-def continuous_segments(label):
-    label = np.asarray(label)
-
-    if not len(label):
-        return
-
-    breaks = list(np.where(label[:-1] != label[1:])[0] + 1)
-    for begin, end in zip([0] + breaks, breaks + [len(label)]):
-        assert begin < end
-        yield begin, end
-
-
-def csl_cut(emg_data, framerate):
-    window = int(np.round(150 * framerate / 2048))
-    emg_data = emg_data[:len(emg_data) // window * window].reshape(-1, 150, emg_data.shape[1])
-    rms = np.sqrt(np.mean(np.square(emg_data), axis=1))
-    rms = [median_filter(image, 3).ravel() for image in rms.reshape(-1, 24, 7)]
-    rms = np.mean(rms, axis=1)
-    threshold = np.mean(rms)
-    mask = rms > threshold
-    for i in range(1, len(mask) - 1):
-        if not mask[i] and mask[i - 1] and mask[i + 1]:
-            mask[i] = True
-    begin, end = max(continuous_segments(mask),
-                     key=lambda s: (mask[s[0]], s[1] - s[0]))
-    return begin * window, end * window
-
-
-def csl_preprocess(trial):
-    trial = np.delete(trial, np.s_[7:192:8], 0)
-    trial = trial.T
-
-    # bandpass
-    trial = np.transpose([butter_bandpass_filter(ch, 20, 400, 2048, 4) for ch in trial.T])
-    # cut
-    begin, end = csl_cut(trial, 2048)
-    # print(begin, end)
-    trial = trial[begin:end]
-    # median filter
-    trial = np.array([median_filter(image, 3).ravel() for image in trial.reshape(-1, 24, 7)])
-    return trial
-
-
 class CSLDataset(Dataset):
     """An abstract class representing a Dataset.
     """
@@ -116,7 +63,8 @@ class CSLDataset(Dataset):
         processed_data_folder = os.path.join(root_path, 'data', 'csl-processed')
         if os.path.isdir(processed_data_folder):
             print('processed csl data exist, load {} data from the file'.format('train' if train else 'test'))
-            data_set = _load_capg_from_h5(processed_data_folder, self.train, gestures)
+            print('it may take a few minutes...')
+            data_set = _load_csl_from_h5(processed_data_folder, self.train, gestures)
         else:
             print('processed csl data not exist, create new h5 files')
             os.mkdir(processed_data_folder)
@@ -198,7 +146,7 @@ def _save_h5_file(data_set, folder_path, grp_name):
                 train_grp.create_dataset(str(i), data=emg_data)
 
 
-def _load_capg_from_h5(data_folder: str, train: bool, gestures):
+def _load_csl_from_h5(data_folder: str, train: bool, gestures):
     data_set = {}
     data_grp = 'train' if train else 'test'
     for g in gestures:
@@ -284,18 +232,6 @@ def _read_csl_mat_files(session_path: str, mat_list: list) -> list:
         mat_name = mat_name[0:-4]  # extract name from gest1.mat to gest1
         mat_files.append((mat_name, mat_path))
     return mat_files
-
-
-def _merge_data(data_a: dict, data_b: dict) -> dict:
-    all_gestures = set(data_a.keys()).union(set(data_b.keys()))
-    emg_data = {i: [] for i in all_gestures}
-    for g in all_gestures:
-        if g in data_a.keys():
-            emg_data[g] += data_a[g]
-        if g in data_b.keys():
-            emg_data[g] += data_b[g]
-
-    return emg_data
 
 
 def _read_one_mat_file(file_tuple):
