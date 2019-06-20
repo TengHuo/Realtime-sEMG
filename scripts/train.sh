@@ -26,14 +26,14 @@
 
 # CNN model ########################################################################
 #python -m emg.train cnn \
-#                  --suffix adam-compare \
+#                  --suffix default \
 #                  --sub_folder gesture-8 \
 #                  --gesture_num 8 \
-#                  --epoch 200 \
+#                  --epoch 120 \
 #                  --train_batch_size 256 \
 #                  --valid_batch_size 1024 \
-#                  --lr 0.001 \
-#                  --lr_step 70
+#                  --lr 0.01 \
+#                  --lr_step 40
 
 # MLP model ########################################################################
 #python -m emg.train mlp \

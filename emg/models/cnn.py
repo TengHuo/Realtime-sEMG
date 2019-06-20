@@ -14,6 +14,7 @@ import torch.nn as nn
 from torch.nn.modules.utils import _pair
 
 from emg.models.base import EMGClassifier
+from emg.utils import config_tensorboard
 from emg.data_loader.capg_data import CapgDataset
 
 
@@ -96,14 +97,13 @@ def main(train_args, TEST_MODE=False):
     args = train_args
 
     model = CNN(args['gesture_num'])
-    name = args['model'] + '-compare_gesture'  # + str(args['gesture_num'])
-    sub_folder = 'gesture-{}'.format(args['gesture_num'])
+    name = args['name']
+    sub_folder = args['sub_folder']
 
-    from emg.utils import config_tensorboard
-    tensorboard_cb = config_tensorboard(name, sub_folder)  # , model, (1, 1, 16, 8))
+    tensorboard_cb = config_tensorboard(name, sub_folder)
 
-    # from emg.utils.lr_scheduler import DecayLR
-    # lr_callback = DecayLR(start_lr=0.001, gamma=0.1, step_size=20)
+    from emg.utils.lr_scheduler import DecayLR
+    lr_callback = DecayLR(start_lr=args['lr'], gamma=0.5, step_size=args['lr_step'])
 
     train_set = CapgDataset(gesture=args['gesture_num'],
                             sequence_len=1,
@@ -115,11 +115,13 @@ def main(train_args, TEST_MODE=False):
                         model_name=name,
                         sub_folder=sub_folder,
                         hyperparamters=args,
-                        optimizer=torch.optim.Adam,
+                        optimizer=torch.optim.SGD,
+                        optimizer__momentum=0.95,
+                        optimizer__weight_decay=1e-5,
                         max_epochs=args['epoch'],
                         lr=args['lr'],
                         dataset=train_set,
-                        callbacks=[tensorboard_cb])
+                        callbacks=[tensorboard_cb, lr_callback])
 
     net.fit_with_dataset()
 
