@@ -23,11 +23,13 @@ from skorch.callbacks import Checkpoint, TrainEndCheckpoint, EarlyStopping
 from skorch.dataset import CVSplit
 from skorch.utils import is_dataset, noop, to_numpy
 from skorch.utils import train_loss_score, valid_loss_score
+from skorch.dataset import get_len
 
 from emg.utils.tools import init_parameters, generate_folder
 from emg.utils.report_logger import ReportLog, save_evaluation
 from emg.utils.lr_scheduler import DecayLR
 from emg.utils.progressbar import ProgressBar
+from emg.data_loader.capg_data import CapgDataset
 
 
 class EMGClassifier(NeuralNet):
@@ -36,7 +38,7 @@ class EMGClassifier(NeuralNet):
                  sub_folder: str,
                  hyperparamters: dict,
                  optimizer,
-                 dataset: torch.utils.data.Dataset,
+                 dataset: CapgDataset,
                  callbacks: list,
                  continue_train=False,
                  train_split=CVSplit(cv=0.1, random_state=0)):
@@ -58,6 +60,7 @@ class EMGClassifier(NeuralNet):
                                             iterator_valid__batch_size=hyperparamters['valid_batch_size'])
         self.model_name = model_name
         self.hyperparamters = hyperparamters
+        self.extend_scale = dataset.scale
         self.model_path = generate_folder('checkpoints', model_name, sub_folder=sub_folder)
 
         if continue_train:
@@ -240,3 +243,70 @@ class EMGClassifier(NeuralNet):
         avg_score = np.average(all_score)
         save_evaluation(self.model_path, avg_score)
         return avg_score
+
+    def fit_loop(self, X, y=None, epochs=None, **fit_params):
+        epochs = epochs if epochs is not None else self.max_epochs
+
+        # split K-fold dataset indcies
+        dataset = self.get_dataset(X, y)
+        k = 10
+        fold_indcies = self.split_k_fold(k, len(dataset))
+
+        for e in range(epochs):
+            # get train and validation set
+            valid_fold_idx = e % k
+            idx_train = []
+            for i in range(k):
+                if i == valid_fold_idx:
+                    continue
+                else:
+                    idx_train += fold_indcies[i]
+            idx_train = np.array(idx_train, dtype=int)
+            idx_valid = np.array(fold_indcies[valid_fold_idx], dtype=int)
+
+            dataset_train = torch.utils.data.Subset(dataset, idx_train)
+            dataset_valid = torch.utils.data.Subset(dataset, idx_valid)
+            on_epoch_kwargs = {
+                'dataset_train': dataset_train,
+                'dataset_valid': dataset_valid,
+            }
+
+            self.notify('on_epoch_begin', **on_epoch_kwargs)
+            train_batch_count = 0
+            for data in self.get_iterator(dataset_train, training=True):
+                xi, yi = data
+                self.notify('on_batch_begin', X=xi, y=yi, training=True)
+                step = self.train_step(xi, yi, **fit_params)
+                self.history.record_batch('train_loss', step['loss'].item())
+                self.history.record_batch('train_batch_size', get_len(xi))
+                self.notify('on_batch_end', X=xi, y=yi, training=True, **step)
+                train_batch_count += 1
+            self.history.record("train_batch_count", train_batch_count)
+
+            valid_batch_count = 0
+            for data in self.get_iterator(dataset_valid, training=False):
+                xi, yi = data
+                self.notify('on_batch_begin', X=xi, y=yi, training=False)
+                step = self.validation_step(xi, yi, **fit_params)
+                self.history.record_batch('valid_loss', step['loss'].item())
+                self.history.record_batch('valid_batch_size', get_len(xi))
+                self.notify('on_batch_end', X=xi, y=yi, training=False, **step)
+                valid_batch_count += 1
+            self.history.record("valid_batch_count", valid_batch_count)
+
+            self.notify('on_epoch_end', **on_epoch_kwargs)
+        return self
+
+    def split_k_fold(self, k, length):
+        scale = self.extend_scale
+        true_len = length // scale
+        folds = [[] for _ in range(k)]
+        from random import shuffle
+        data_indices = list(range(true_len))
+        shuffle(data_indices)
+        for i in data_indices:
+            fold_idx = i % k
+            extend_idx = i * scale
+            extend_idcies = [extend_idx + j for j in range(scale)]
+            folds[fold_idx] += extend_idcies
+        return folds
