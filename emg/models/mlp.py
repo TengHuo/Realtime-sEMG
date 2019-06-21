@@ -50,10 +50,13 @@ def main(train_args, TEST_MODE=False):
     # 2. 定义好model
     args = {**train_args, **hyperparameters}
     model = MLP(args['input_size'], args['hidden_size'], args['gesture_num'])
-    name = args['name']  # + '-dp_test-' + str(args['gesture_num'])
-    sub_folder = args['sub_folder']  # 'dp-{}'.format(args['dropout'])
+    name = args['name']
+    sub_folder = args['sub_folder']
 
     tensorboard_cb = config_tensorboard(name, sub_folder, model, (1, 128))
+
+    from emg.utils.lr_scheduler import DecayLR
+    lr_callback = DecayLR(start_lr=args['lr'], gamma=0.5, step_size=args['lr_step'])
 
     train_set = CapgDataset(gesture=args['gesture_num'],
                             sequence_len=1,
@@ -65,10 +68,8 @@ def main(train_args, TEST_MODE=False):
                         sub_folder=sub_folder,
                         hyperparamters=args,
                         optimizer=torch.optim.Adam,
-                        max_epochs=args['epoch'],
-                        lr=args['lr'],
                         dataset=train_set,
-                        callbacks=[tensorboard_cb])
+                        callbacks=[tensorboard_cb, lr_callback])
 
     net.fit_with_dataset()
 
@@ -84,14 +85,16 @@ def main(train_args, TEST_MODE=False):
 if __name__ == "__main__":
     test_args = {
         'model': 'mlp',
-        'suffix': 'test-args',
-        'sub_folder': 'test5',
+        'suffix': 'test-shuffle',
+        'sub_folder': 'test1',
         'gesture_num': 8,
-        'epoch': 1,
+        'epoch': 300,
         'train_batch_size': 512,
         'valid_batch_size': 2048,
-        'lr': 0.001}
+        'lr': 0.001,
+        'lr_step': 50}
 
+    print('test')
     default_name = test_args['model'] + '-{}'.format(test_args['suffix'])
     test_args['name'] = default_name
-    main(test_args, TEST_MODE=True)
+    main(test_args, TEST_MODE=False)

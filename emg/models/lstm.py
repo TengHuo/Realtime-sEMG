@@ -74,11 +74,7 @@ def main(train_args, TEST_MODE=False):
                         model_name=name,
                         sub_folder=sub_folder,
                         hyperparamters=args,
-                        optimizer=torch.optim.SGD,
-                        optimizer__momentum=0.95,
-                        optimizer__weight_decay=1e-5,
-                        max_epochs=args['epoch'],
-                        lr=args['lr'],
+                        optimizer=torch.optim.Adam,
                         dataset=train_set,
                         callbacks=[tensorboard_cb, lr_callback])
 
@@ -105,16 +101,19 @@ hyperparameters = {
 if __name__ == "__main__":
     test_args = {
         'model': 'lstm',
-        'name': 'lstm-test',
-        'sub_folder': 'test2',
+        'suffix': 'test-shuffle',
+        'sub_folder': 'test1',
         'gesture_num': 8,
         'epoch': 1,
         'train_batch_size': 256,
         'valid_batch_size': 1024,
-        'lr': 0.001
-    }
+        'lr': 0.001,
+        'lr_step': 50}
 
-    main(test_args, TEST_MODE=True)
+    print('test')
+    default_name = test_args['model'] + '-{}'.format(test_args['suffix'])
+    test_args['name'] = default_name
+    main(test_args, TEST_MODE=False)
 
     # for i in [10, 15, 20, 30, 50]:
     #     hyperparameters['seq_length'] = int(i)

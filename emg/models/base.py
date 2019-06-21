@@ -31,25 +31,33 @@ from emg.utils.progressbar import ProgressBar
 
 
 class EMGClassifier(NeuralNet):
-    def __init__(self, module: nn.Module, model_name: str, sub_folder: str,
-                 hyperparamters: dict, *args, stop_patience=5,
-                 continue_train=False, criterion=nn.CrossEntropyLoss,
-                 train_split=CVSplit(cv=0.1), **kwargs):
+    def __init__(self, module: nn.Module,
+                 model_name: str,
+                 sub_folder: str,
+                 hyperparamters: dict,
+                 optimizer,
+                 dataset: torch.utils.data.Dataset,
+                 callbacks: list,
+                 continue_train=False,
+                 train_split=CVSplit(cv=0.1, random_state=0)):
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        super(EMGClassifier, self).__init__(module, *args,
+        super(EMGClassifier, self).__init__(module,
+                                            criterion=nn.CrossEntropyLoss,
+                                            optimizer=optimizer,
+                                            lr=hyperparamters['lr'],
+                                            max_epochs=hyperparamters['epoch'],
+                                            dataset=dataset,
+                                            train_split=train_split,
+                                            callbacks=callbacks,
                                             device=device,
-                                            criterion=criterion,
                                             iterator_train__shuffle=True,
                                             iterator_train__num_workers=4,
                                             iterator_train__batch_size=hyperparamters['train_batch_size'],
                                             iterator_valid__shuffle=False,
                                             iterator_valid__num_workers=4,
-                                            iterator_valid__batch_size=hyperparamters['valid_batch_size'],
-                                            train_split=train_split,
-                                            **kwargs)
+                                            iterator_valid__batch_size=hyperparamters['valid_batch_size'])
         self.model_name = model_name
         self.hyperparamters = hyperparamters
-        self.patience = stop_patience
         self.model_path = generate_folder('checkpoints', model_name, sub_folder=sub_folder)
 
         if continue_train:
@@ -95,7 +103,7 @@ class EMGClassifier(NeuralNet):
         if 'stop_patience' in self.hyperparamters.keys() and \
                 self.hyperparamters['stop_patience']:
             earlystop_cb = ('earlystop',  EarlyStopping(
-                            patience=self.patience,
+                            patience=self.hyperparamters['stop_patience'],
                             threshold=1e-4))
             default_cb_list.append(earlystop_cb)
 
