@@ -80,16 +80,16 @@ class C3D(nn.Module):
 def main(train_args, TEST_MODE=False):
     # 1. 设置好optimizer
     # 2. 定义好model
-    args = train_args  # {**train_args, **hyperparameters}
+    args = train_args
     model = C3D(args['gesture_num'])
-    name = args['name']  # args['model'] + '-' + str(args['gesture_num'])
-    sub_folder = args['sub_folder']  # '2layer-conv'
+    name = args['name']
+    sub_folder = args['sub_folder']
 
     from emg.utils import config_tensorboard
-    tensorboard_cb = config_tensorboard(name, sub_folder, model, (1, 1, 10, 16, 8))
+    tensorboard_cb = config_tensorboard(name, sub_folder)
 
-    # from emg.utils.lr_scheduler import DecayLR
-    # lr_callback = DecayLR(start_lr=0.001, gamma=0.1, step_size=12)
+    from emg.utils.lr_scheduler import DecayLR
+    lr_callback = DecayLR(start_lr=args['lr'], gamma=0.5, step_size=args['lr_step'])
 
     train_set = CapgDataset(gesture=args['gesture_num'],
                             sequence_len=10,
@@ -105,7 +105,7 @@ def main(train_args, TEST_MODE=False):
                         max_epochs=args['epoch'],
                         lr=args['lr'],
                         dataset=train_set,
-                        callbacks=[tensorboard_cb])
+                        callbacks=[tensorboard_cb, lr_callback])
 
     net.fit_with_dataset()
 
