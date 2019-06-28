@@ -10,6 +10,7 @@
 
 
 import os
+from random import shuffle
 import numpy as np
 import torch
 from torch import nn
@@ -23,33 +24,44 @@ from skorch.callbacks import Checkpoint, TrainEndCheckpoint, EarlyStopping
 from skorch.dataset import CVSplit
 from skorch.utils import is_dataset, noop, to_numpy
 from skorch.utils import train_loss_score, valid_loss_score
+from skorch.dataset import get_len
 
 from emg.utils.tools import init_parameters, generate_folder
 from emg.utils.report_logger import ReportLog, save_evaluation
 from emg.utils.lr_scheduler import DecayLR
 from emg.utils.progressbar import ProgressBar
+from emg.data_loader.capg_data import CapgDataset
 
 
 class EMGClassifier(NeuralNet):
-    def __init__(self, module: nn.Module, model_name: str, sub_folder: str,
-                 hyperparamters: dict, *args, stop_patience=5,
-                 continue_train=False, criterion=nn.CrossEntropyLoss,
-                 train_split=CVSplit(cv=0.1), **kwargs):
+    def __init__(self, module: nn.Module,
+                 model_name: str,
+                 sub_folder: str,
+                 hyperparamters: dict,
+                 optimizer,
+                 dataset: CapgDataset,
+                 callbacks: list,
+                 continue_train=False,
+                 train_split=CVSplit(cv=0.1, random_state=0)):
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        super(EMGClassifier, self).__init__(module, *args,
+        super(EMGClassifier, self).__init__(module,
+                                            criterion=nn.CrossEntropyLoss,
+                                            optimizer=optimizer,
+                                            lr=hyperparamters['lr'],
+                                            max_epochs=hyperparamters['epoch'],
+                                            dataset=dataset,
+                                            train_split=train_split,
+                                            callbacks=callbacks,
                                             device=device,
-                                            criterion=criterion,
                                             iterator_train__shuffle=True,
                                             iterator_train__num_workers=4,
                                             iterator_train__batch_size=hyperparamters['train_batch_size'],
                                             iterator_valid__shuffle=False,
                                             iterator_valid__num_workers=4,
-                                            iterator_valid__batch_size=hyperparamters['valid_batch_size'],
-                                            train_split=train_split,
-                                            **kwargs)
+                                            iterator_valid__batch_size=hyperparamters['valid_batch_size'])
         self.model_name = model_name
         self.hyperparamters = hyperparamters
-        self.patience = stop_patience
+        self.extend_scale = dataset.scale
         self.model_path = generate_folder('checkpoints', model_name, sub_folder=sub_folder)
 
         if continue_train:
@@ -95,7 +107,7 @@ class EMGClassifier(NeuralNet):
         if 'stop_patience' in self.hyperparamters.keys() and \
                 self.hyperparamters['stop_patience']:
             earlystop_cb = ('earlystop',  EarlyStopping(
-                            patience=self.patience,
+                            patience=self.hyperparamters['stop_patience'],
                             threshold=1e-4))
             default_cb_list.append(earlystop_cb)
 
@@ -232,3 +244,69 @@ class EMGClassifier(NeuralNet):
         avg_score = np.average(all_score)
         save_evaluation(self.model_path, avg_score)
         return avg_score
+
+    def fit_loop(self, X, y=None, epochs=None, **fit_params):
+        epochs = epochs if epochs is not None else self.max_epochs
+
+        # split K-fold dataset indcies
+        dataset = self.get_dataset(X, y)
+        k = 10
+        fold_indcies = self.split_k_fold(k, len(dataset))
+
+        for e in range(epochs):
+            # get train and validation set
+            valid_fold_idx = e % k
+            idx_train = []
+            for i in range(k):
+                if i == valid_fold_idx:
+                    continue
+                else:
+                    idx_train += fold_indcies[i]
+            idx_train = np.array(idx_train, dtype=int)
+            idx_valid = np.array(fold_indcies[valid_fold_idx], dtype=int)
+
+            dataset_train = torch.utils.data.Subset(dataset, idx_train)
+            dataset_valid = torch.utils.data.Subset(dataset, idx_valid)
+            on_epoch_kwargs = {
+                'dataset_train': dataset_train,
+                'dataset_valid': dataset_valid,
+            }
+
+            self.notify('on_epoch_begin', **on_epoch_kwargs)
+            train_batch_count = 0
+            for data in self.get_iterator(dataset_train, training=True):
+                xi, yi = data
+                self.notify('on_batch_begin', X=xi, y=yi, training=True)
+                step = self.train_step(xi, yi, **fit_params)
+                self.history.record_batch('train_loss', step['loss'].item())
+                self.history.record_batch('train_batch_size', get_len(xi))
+                self.notify('on_batch_end', X=xi, y=yi, training=True, **step)
+                train_batch_count += 1
+            self.history.record("train_batch_count", train_batch_count)
+
+            valid_batch_count = 0
+            for data in self.get_iterator(dataset_valid, training=False):
+                xi, yi = data
+                self.notify('on_batch_begin', X=xi, y=yi, training=False)
+                step = self.validation_step(xi, yi, **fit_params)
+                self.history.record_batch('valid_loss', step['loss'].item())
+                self.history.record_batch('valid_batch_size', get_len(xi))
+                self.notify('on_batch_end', X=xi, y=yi, training=False, **step)
+                valid_batch_count += 1
+            self.history.record("valid_batch_count", valid_batch_count)
+
+            self.notify('on_epoch_end', **on_epoch_kwargs)
+        return self
+
+    def split_k_fold(self, k, length):
+        scale = self.extend_scale
+        true_len = length // scale
+        folds = [[] for _ in range(k)]
+        data_indices = list(range(true_len))
+        shuffle(data_indices)
+        for i in range(true_len):
+            fold_idx = i % k
+            extend_idx = data_indices[i] * scale
+            extend_idcies = [extend_idx + j for j in range(scale)]
+            folds[fold_idx] += extend_idcies
+        return folds
