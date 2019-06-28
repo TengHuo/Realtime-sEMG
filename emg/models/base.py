@@ -10,6 +10,7 @@
 
 
 import os
+from random import shuffle
 import numpy as np
 import torch
 from torch import nn
@@ -301,12 +302,11 @@ class EMGClassifier(NeuralNet):
         scale = self.extend_scale
         true_len = length // scale
         folds = [[] for _ in range(k)]
-        from random import shuffle
         data_indices = list(range(true_len))
         shuffle(data_indices)
-        for i in data_indices:
+        for i in range(true_len):
             fold_idx = i % k
-            extend_idx = i * scale
+            extend_idx = data_indices[i] * scale
             extend_idcies = [extend_idx + j for j in range(scale)]
             folds[fold_idx] += extend_idcies
         return folds

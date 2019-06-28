@@ -102,8 +102,6 @@ def main(train_args, TEST_MODE=False):
                         sub_folder=sub_folder,
                         hyperparamters=args,
                         optimizer=torch.optim.Adam,
-                        max_epochs=args['epoch'],
-                        lr=args['lr'],
                         dataset=train_set,
                         callbacks=[tensorboard_cb, lr_callback])
 
