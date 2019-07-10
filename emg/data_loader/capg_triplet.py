@@ -94,7 +94,7 @@ class CapgTriplet(Dataset):
             elif self.seq_length == 1:
                 emg_segment = emg_segment[0]
 
-            triplet_emg.append(emg_segment)
+            triplet_emg.append(torch.tensor(emg_segment, dtype=torch.float))
         target = torch.tensor([1, 0])
         return triplet_emg, target
 

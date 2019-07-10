@@ -4,6 +4,7 @@
 import os
 import numpy as np
 import torch
+import torch.nn.functional as F
 from torch import nn
 from torch.utils.data import DataLoader
 
@@ -15,6 +16,7 @@ from skorch.callbacks import Checkpoint, TrainEndCheckpoint, EarlyStopping
 from skorch.dataset import CVSplit
 from skorch.utils import is_dataset, noop, to_numpy
 from skorch.utils import train_loss_score, valid_loss_score
+from skorch.utils import TeeGenerator
 
 from emg.utils.tools import init_parameters, generate_folder
 from emg.utils.report_logger import ReportLog, save_evaluation
@@ -116,10 +118,10 @@ class EMGSiamese(NeuralNet):
     #         raise ValueError(msg)
 
     # pylint: disable=arguments-differ
-    def get_loss(self, y_pred, y_true, *args, **kwargs):
-        if isinstance(self.criterion_, nn.NLLLoss):
-            y_pred = torch.log(y_pred)
-        return super().get_loss(y_pred, y_true, *args, **kwargs)
+    # def get_loss(self, y_pred, y_true, *args, **kwargs):
+    #     if isinstance(self.criterion_, nn.NLLLoss):
+    #         y_pred = torch.log(y_pred)
+    #     return super().get_loss(y_pred, y_true, *args, **kwargs)
 
     # pylint: disable=signature-differs
     def fit_with_dataset(self):
@@ -140,7 +142,7 @@ class EMGSiamese(NeuralNet):
 
     def train_step_single(self, Xi, yi, **fit_params):
         """Compute y_pred, loss value, and update net's gradients.
-
+        # TODO: 修改为siamese training
         The module is set to be in train mode (e.g. dropout is
         applied).
 
@@ -159,8 +161,15 @@ class EMGSiamese(NeuralNet):
         """
         self.module_.train()
         self.optimizer_.zero_grad()
-        y_pred = self.infer(Xi, **fit_params)
-        loss = self.get_loss(y_pred, yi, X=Xi, training=True)
+        pred_positive = self.infer(Xi[:2], **fit_params)
+        pred_negative = self.infer(Xi[0:3:2], **fit_params)
+
+        target_positive = torch.squeeze(yi[:, 0])
+        target_negative = torch.squeeze(yi[:, 1])
+
+        positive_loss = F.cross_entropy(pred_positive, target_positive)
+        negative_loss = F.cross_entropy(pred_negative, target_negative)
+        loss = negative_loss + positive_loss
         loss.backward()
 
         self.notify(
@@ -170,10 +179,8 @@ class EMGSiamese(NeuralNet):
             y=yi
         )
 
-        return {
-            'loss': loss,
-            'y_pred': y_pred,
-            }
+        return {'loss': loss,
+                'y_pred': }
 
     def train_step(self, Xi, yi, **fit_params):
         """Override the function for siamese training,
@@ -298,3 +305,6 @@ class EMGSiamese(NeuralNet):
         avg_score = np.average(all_score)
         save_evaluation(self.model_path, avg_score)
         return avg_score
+#     TODO: 1. 添加std，分析每个gesture上的accuracy，查看不同的gesture上模型的performance
+#           2. 分析不同subject的performance
+#           3. confusion matrix
