@@ -49,7 +49,8 @@ def main(train_args, TEST_MODE=False):
     # 1. 设置好optimizer
     # 2. 定义好model
     args = {**train_args, **hyperparameters}
-    model = MLP(args['input_size'], args['hidden_size'], args['gesture_num'])
+    all_gestures = [2, 3, 4, 5, 6, 7, 8, 9]
+    model = MLP(args['input_size'], args['hidden_size'], len(all_gestures))
     name = args['name']
     sub_folder = args['sub_folder']
 
@@ -58,37 +59,56 @@ def main(train_args, TEST_MODE=False):
     from emg.utils.lr_scheduler import DecayLR
     lr_callback = DecayLR(start_lr=args['lr'], gamma=0.5, step_size=args['lr_step'])
 
-    train_set = CapgDataset(gesture=args['gesture_num'],
-                            sequence_len=1,
-                            test_mode=TEST_MODE,
-                            train=True)
-
     net = EMGClassifier(module=model,
                         model_name=name,
                         sub_folder=sub_folder,
                         hyperparamters=args,
                         optimizer=torch.optim.Adam,
-                        dataset=train_set,
+                        gesture_list=all_gestures,
                         callbacks=[tensorboard_cb, lr_callback])
 
-    net.fit_with_dataset()
+    net = train(net, all_gestures)
 
-    test_set = CapgDataset(gesture=args['gesture_num'],
+    net = test(net, all_gestures)
+
+    test_gestures = all_gestures[0:1]
+    net = test(net, test_gestures)
+
+    test_gestures = all_gestures[1:2]
+    net = test(net, test_gestures)
+
+    test_gestures = all_gestures[2:3]
+    net = test(net, test_gestures)
+
+
+def train(net: EMGClassifier, gesture_indices: list):
+    train_set = CapgDataset(gestures_label_map=net.gesture_map,
+                            sequence_len=1,
+                            gesture_list=gesture_indices,
+                            train=True)
+    net.dataset = train_set
+    net.fit_with_dataset()
+    return net
+
+
+def test(net: EMGClassifier, gesture_indices: list):
+    test_set = CapgDataset(gestures_label_map=net.gesture_map,
                            sequence_len=1,
-                           test_mode=TEST_MODE,
+                           gesture_list=gesture_indices,
                            train=False)
 
     avg_score = net.test_model(test_set)
     print('test accuracy: {:.4f}'.format(avg_score))
+    return net
 
 
 if __name__ == "__main__":
     test_args = {
         'model': 'mlp',
-        'suffix': 'test-shuffle',
-        'sub_folder': 'test1',
-        'gesture_num': 8,
-        'epoch': 300,
+        'suffix': 'test-test',
+        'sub_folder': 'test2',
+        # 'gesture_num': 8,
+        'epoch': 60,
         'train_batch_size': 512,
         'valid_batch_size': 2048,
         'lr': 0.001,

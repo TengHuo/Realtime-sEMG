@@ -18,29 +18,29 @@ from scipy.io import loadmat
 import numpy as np
 
 
-def default_capg_loaders(model_args: dict):
-    seq_length = model_args['seq_length'] if 'seq_length' in model_args else 1
-    train_loader = DataLoader(CapgDataset(gesture=model_args['gesture_num'],
-                                          sequence_len=seq_length,
-                                          sequence_result=model_args['seq_result'],
-                                          frame_x=model_args['frame_input'],
-                                          test_mode=False,
-                                          train=True),
-                              batch_size=model_args['train_batch_size'],
-                              num_workers=4,
-                              shuffle=True)
-
-    val_loader = DataLoader(CapgDataset(gesture=model_args['gesture_num'],
-                                        sequence_len=seq_length,
-                                        sequence_result=model_args['seq_result'],
-                                        frame_x=model_args['frame_input'],
-                                        test_mode=False,
-                                        train=False),
-                            batch_size=model_args['val_batch_size'],
-                            num_workers=4,
-                            shuffle=False)
-
-    return train_loader, val_loader
+# def default_capg_loaders(model_args: dict):
+#     seq_length = model_args['seq_length'] if 'seq_length' in model_args else 1
+#     train_loader = DataLoader(CapgDataset(gesture=model_args['gesture_num'],
+#                                           sequence_len=seq_length,
+#                                           sequence_result=model_args['seq_result'],
+#                                           frame_x=model_args['frame_input'],
+#                                           test_mode=False,
+#                                           train=True),
+#                               batch_size=model_args['train_batch_size'],
+#                               num_workers=4,
+#                               shuffle=True)
+#
+#     val_loader = DataLoader(CapgDataset(gesture=model_args['gesture_num'],
+#                                         sequence_len=seq_length,
+#                                         sequence_result=model_args['seq_result'],
+#                                         frame_x=model_args['frame_input'],
+#                                         test_mode=False,
+#                                         train=False),
+#                             batch_size=model_args['val_batch_size'],
+#                             num_workers=4,
+#                             shuffle=False)
+#
+#     return train_loader, val_loader
 
 
 class CapgDataset(Dataset):
@@ -51,8 +51,8 @@ class CapgDataset(Dataset):
     supporting integer indexing in range from 0 to len(self) exclusive.
     """
 
-    def __init__(self, gesture, sequence_len, sequence_result=False,
-                 frame_x=False, train=True, test_mode=False, transform=None):
+    def __init__(self, gestures_label_map, gesture_list, sequence_len,
+                 frame_x=False, train=True, transform=None):
 
         self.transform = transform
         self.train = train  # training set or test set
@@ -76,14 +76,12 @@ class CapgDataset(Dataset):
             _save_capg_to_h5(train_set, test_set, train_data_path, test_data_path)
 
         if self.train:
-            X, y = _prepare_data(train_set, gesture_num=gesture)
+            X, y = _prepare_data(train_set, gestures_label_map, gesture_list)
         else:
-            X, y = _prepare_data(test_set, gesture_num=gesture)
+            X, y = _prepare_data(test_set, gestures_label_map, gesture_list)
 
         y = y.astype(int)
-
-        if test_mode and self.train:
-            # for test code, only use small part of data
+        if False:  # for test code, only use small part of data
             self.data, self.targets = X[:64], y[:64]
         else:
             self.data, self.targets = X, y
@@ -123,16 +121,19 @@ class CapgDataset(Dataset):
         return self.data.shape[0] * self.scale
 
 
-def _prepare_data(raw_data, gesture_num=8):
+def _prepare_data(raw_data, gesture_dict, required_gestures):
     """convert the data from raw data to numpy array
+    gesture_dict is gesture index mapping: {raw gesture index: target index}
     """
-    required_range = range(gesture_num)
+
     X = list()
     y = list()
-    for i in required_range:
-        amount = raw_data[i].shape[0]
-        X.append(raw_data[i])
-        y += [i for _ in range(amount)]
+    for gesture in required_gestures:
+        amount = raw_data[gesture].shape[0]
+        X.append(raw_data[gesture])
+
+        label = gesture_dict[str(gesture)]
+        y += [label for _ in range(amount)]
     X = np.concatenate(X, axis=0)
     X = X.astype(np.float32)
     y = np.asarray(y, dtype=np.int)
@@ -231,12 +232,17 @@ def _read_capg_mat_files(path, mat_list):
 
 if __name__ == '__main__':
     # test pytorch data loader
-    train_data = CapgDataset(gesture=8, sequence_len=10, sequence_result=False,
-                             frame_x=False, train=True, transform=None)
+    test_list = [1, 2, 3, 4, 5, 6, 7, 8]
+    test_map = {str(test_list[i]): i for i in range(len(test_list))}
+    train_data = CapgDataset(gestures_label_map=test_map, gesture_list=test_list, sequence_len=10,
+                             frame_x=False, train=True)
     print(train_data.data.shape)
     print(train_data.targets.shape)
+    print(set(train_data.targets))
 
-    test_data = CapgDataset(gesture=8, sequence_len=10, sequence_result=False,
-                            frame_x=False, train=False, transform=None)
+    test_list = test_list[0:1]
+    test_data = CapgDataset(gestures_label_map=test_map, gesture_list=test_list, sequence_len=10,
+                            frame_x=False, train=False)
     print(test_data.data.shape)
     print(test_data.targets.shape)
+    print(set(test_data.targets))

@@ -11,6 +11,7 @@
 
 import os
 from random import shuffle
+import json
 import numpy as np
 import torch
 from torch import nn
@@ -39,9 +40,9 @@ class EMGClassifier(NeuralNet):
                  sub_folder: str,
                  hyperparamters: dict,
                  optimizer,
-                 dataset: CapgDataset,
+                 gesture_list: list,  # all gestures index
                  callbacks: list,
-                 continue_train=False,
+                 # train_new_model=True,
                  train_split=CVSplit(cv=0.1, random_state=0)):
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         super(EMGClassifier, self).__init__(module,
@@ -49,7 +50,6 @@ class EMGClassifier(NeuralNet):
                                             optimizer=optimizer,
                                             lr=hyperparamters['lr'],
                                             max_epochs=hyperparamters['epoch'],
-                                            dataset=dataset,
                                             train_split=train_split,
                                             callbacks=callbacks,
                                             device=device,
@@ -61,23 +61,22 @@ class EMGClassifier(NeuralNet):
                                             iterator_valid__batch_size=hyperparamters['valid_batch_size'])
         self.model_name = model_name
         self.hyperparamters = hyperparamters
-        self.extend_scale = dataset.scale
+        # self.extend_scale = dataset.scale
+        self._gesture_mapping = None
+        self._all_gestures = gesture_list
+        self.module.apply(init_parameters)
+        self.model_trained = False
         self.model_path = generate_folder('checkpoints', model_name, sub_folder=sub_folder)
 
-        if continue_train:
-            params = self.model_path + 'train_end_params.pt'
-            optimizer = self.model_path + 'train_end_optimizer.pt'
-            history = self.model_path + 'train_end_history.json'
-            if os.path.exists(params) and os.path.exists(optimizer) and os.path.exists(history):
-                print('load parameter from a pretrained model')
-                self.load_params(f_params=params,
-                                 f_optimizer=optimizer,
-                                 f_history=history)
-            else:
-                raise FileNotFoundError()
-        else:
-            print('build a new model, init parameters of {}'.format(model_name))
-            self.module.apply(init_parameters)
+        # if train_new_model:
+        #     print('build a new model, init parameters of {}'.format(model_name))
+        #     os.remove(self.model_path)
+        #     self.gesture_map = gesture_list
+        #     self.module.apply(init_parameters)
+        #     self.model_trained = False
+
+    def init_model_param(self):
+        pass
 
     @property
     def _default_callbacks(self):
@@ -156,7 +155,8 @@ class EMGClassifier(NeuralNet):
         # https://github.com/PyCQA/pylint/issues/1085
         x = None
         y = None
-        return super(EMGClassifier, self).fit(x, y)
+        super(EMGClassifier, self).fit(x, y)
+        self.model_trained = True
 
     def predict_proba(self, X):
         """Where applicable, return probability estimates for
@@ -231,6 +231,20 @@ class EMGClassifier(NeuralNet):
         return y_pred
 
     def test_model(self, test_set):
+        if not self.model_trained:
+            params = os.path.join(self.model_path, 'train_end_params.pt')
+            optimizer = os.path.join(self.model_path, 'train_end_optimizer.pt')
+            history = os.path.join(self.model_path, 'train_end_history.json')
+            if os.path.isfile(params) and os.path.isfile(optimizer) and os.path.isfile(history):
+                print('load parameter from a pretrained model')
+                self.initialize()
+                self.load_params(f_params=params,
+                                 f_optimizer=optimizer,
+                                 f_history=history)
+                self.model_trained = True
+            else:
+                raise FileNotFoundError()
+
         test_dataloader = DataLoader(dataset=test_set,
                                      batch_size=1024,
                                      shuffle=False,
@@ -244,6 +258,26 @@ class EMGClassifier(NeuralNet):
         avg_score = np.average(all_score)
         save_evaluation(self.model_path, avg_score)
         return avg_score
+
+    @property
+    def gesture_map(self):
+        if self._gesture_mapping is None:
+            map_file = os.path.join(self.model_path, 'gesture_map.json')
+            if os.path.isfile(map_file):
+                with open(map_file, 'r') as f:
+                    self._gesture_mapping = json.load(f)
+            else:
+                self._gesture_mapping = {str(self._all_gestures[i]): i for i in range(len(self._all_gestures))}
+                with open(map_file, 'w') as f:
+                    json.dump(self._gesture_mapping, f)
+        return self._gesture_mapping
+
+    # @gesture_map.setter
+    # def gesture_map(self, gesture_list):
+    #     self._gesture_mapping = {gesture_list[i]: i for i in range(len(gesture_list))}
+    #     map_file = os.path.join(self.model_path, 'gesture_map.json')
+    #     with open(map_file, 'wb') as f:
+    #         json.dump(self._gesture_mapping, f)
 
     def fit_loop(self, X, y=None, epochs=None, **fit_params):
         epochs = epochs if epochs is not None else self.max_epochs
@@ -299,7 +333,7 @@ class EMGClassifier(NeuralNet):
         return self
 
     def split_k_fold(self, k, length):
-        scale = self.extend_scale
+        scale = self.dataset.scale
         true_len = length // scale
         folds = [[] for _ in range(k)]
         data_indices = list(range(true_len))
