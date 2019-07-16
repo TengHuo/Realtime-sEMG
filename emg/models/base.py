@@ -17,7 +17,7 @@ import torch
 from torch import nn
 from torch.utils.data import DataLoader
 
-from sklearn.metrics import accuracy_score
+from sklearn.metrics import accuracy_score, confusion_matrix
 
 from skorch import NeuralNet
 from skorch.callbacks import EpochTimer, EpochScoring, BatchScoring
@@ -230,7 +230,7 @@ class EMGClassifier(NeuralNet):
         y_pred = np.concatenate(y_preds, 0)
         return y_pred
 
-    def test_model(self, test_set):
+    def test_model(self, test_gestures, test_set):
         if not self.model_trained:
             params = os.path.join(self.model_path, 'train_end_params.pt')
             optimizer = os.path.join(self.model_path, 'train_end_optimizer.pt')
@@ -250,13 +250,20 @@ class EMGClassifier(NeuralNet):
                                      shuffle=False,
                                      num_workers=4)
         all_score = []
+        y_true_all = []
+        y_pred_all = []
         for step, (batch_x, batch_y) in enumerate(test_dataloader):
             y_pred = self.evaluation_step(batch_x)
             y_pred = to_numpy(y_pred.max(-1)[-1])
+            y_true_all += batch_y.tolist()
+            y_pred_all += y_pred.tolist()
             score = accuracy_score(batch_y, y_pred)
             all_score.append(score)
         avg_score = np.average(all_score)
-        save_evaluation(self.model_path, avg_score)
+        labels = [self.gesture_map[str(i)] for i in test_gestures]
+        matrix = confusion_matrix(y_true_all, y_pred_all, labels)
+        print(matrix)
+        save_evaluation(self.model_path, str(test_gestures), matrix, avg_score)
         return avg_score
 
     @property

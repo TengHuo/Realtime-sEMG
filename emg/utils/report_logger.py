@@ -115,12 +115,14 @@ class ReportLog(Callback):
         sys.stdout.flush()
 
 
-def save_evaluation(report_folder: str, score: float):
+def save_evaluation(report_folder: str, test_name: str, confusion_matrix, score: float):
     try:
         report_path = os.path.join(report_folder, 'report.md')
         with open(report_path, 'r+') as f:
             report = f.read()
-            report = report.replace('{{evaluation}}', '{:.4f}'.format(score))
+            report += 'Test name: {}, \n\nAverage accuracy: {:.4f}\n\n\n'.format(test_name, score)
+            report += str(confusion_matrix)
+            # report = report.replace('{{evaluation}}', '{:.4f}'.format(score))
             f.seek(0)
             f.truncate()
             f.write(report)

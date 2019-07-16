@@ -21,5 +21,3 @@
 ![]({{image}})
 
 ## Evaluation
-
-{{evaluation}}

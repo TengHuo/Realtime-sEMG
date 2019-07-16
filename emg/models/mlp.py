@@ -49,7 +49,8 @@ def main(train_args, TEST_MODE=False):
     # 1. 设置好optimizer
     # 2. 定义好model
     args = {**train_args, **hyperparameters}
-    all_gestures = [2, 3, 4, 5, 6, 7, 8, 9]
+    all_gestures = list(range(0, 8))
+    # all_gestures = list(range(0, 20))
     model = MLP(args['input_size'], args['hidden_size'], len(all_gestures))
     name = args['name']
     sub_folder = args['sub_folder']
@@ -71,14 +72,14 @@ def main(train_args, TEST_MODE=False):
 
     net = test(net, all_gestures)
 
-    test_gestures = all_gestures[0:1]
-    net = test(net, test_gestures)
-
-    test_gestures = all_gestures[1:2]
-    net = test(net, test_gestures)
-
-    test_gestures = all_gestures[2:3]
-    net = test(net, test_gestures)
+    # test_gestures = all_gestures[0:1]
+    # net = test(net, test_gestures)
+    #
+    # test_gestures = all_gestures[1:2]
+    # net = test(net, test_gestures)
+    #
+    # test_gestures = all_gestures[2:3]
+    # net = test(net, test_gestures)
 
 
 def train(net: EMGClassifier, gesture_indices: list):
@@ -97,7 +98,7 @@ def test(net: EMGClassifier, gesture_indices: list):
                            gesture_list=gesture_indices,
                            train=False)
 
-    avg_score = net.test_model(test_set)
+    avg_score = net.test_model(gesture_indices, test_set)
     print('test accuracy: {:.4f}'.format(avg_score))
     return net
 
@@ -105,10 +106,10 @@ def test(net: EMGClassifier, gesture_indices: list):
 if __name__ == "__main__":
     test_args = {
         'model': 'mlp',
-        'suffix': 'test-test',
-        'sub_folder': 'test2',
+        'suffix': 'test-evaluation',
+        'sub_folder': 'test6',
         # 'gesture_num': 8,
-        'epoch': 60,
+        'epoch': 10,
         'train_batch_size': 512,
         'valid_batch_size': 2048,
         'lr': 0.001,
