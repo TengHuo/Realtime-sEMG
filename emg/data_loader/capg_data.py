@@ -13,9 +13,14 @@ import re
 import h5py
 import math
 
+import torch
 from torch.utils.data import DataLoader, Dataset
 from scipy.io import loadmat
 import numpy as np
+from torchvision import transforms
+from matplotlib import cm
+import PIL
+from PIL import Image
 
 
 # def default_capg_loaders(model_args: dict):
@@ -107,13 +112,30 @@ class CapgDataset(Dataset):
                 # used for 2d cnn
                 x = x.reshape((1, 16, 8))
             else:
-                # used for 3d cnn
+                # used for 3d cnn: (Channel, Depth, Height, Width)
                 x = x.reshape((1, x.shape[0], 16, 8))
         elif self.seq_length == 1:
             x = x[0]
 
         if self.transform is not None:
-            x = self.transform(x)
+            resized_x = []
+            for i in range(self.seq_length):
+                frame = x[0, i]
+                frame = (frame - frame.min())/(frame.max() - frame.min())
+                cm_hot = cm.get_cmap('seismic')
+                im = Image.fromarray(np.uint8(cm_hot(frame)*255))
+                im = im.convert("RGB")
+                im = im.resize((32, 32), resample=PIL.Image.BILINEAR)
+                im = self.transform(im)
+                im.resize_((im.size(0), 1, im.size(1), im.size(2)))
+                # print(im.min())
+                # print(im.max())
+                resized_x.append(im)
+            resized_x = torch.cat(resized_x, 1)
+            # print(resized_x.size())
+            x = resized_x
+            # print('size:')
+            # print(resized_x.size())
 
         return x, y
 
@@ -232,17 +254,38 @@ def _read_capg_mat_files(path, mat_list):
 
 if __name__ == '__main__':
     # test pytorch data loader
-    test_list = [1, 2, 3, 4, 5, 6, 7, 8]
+    test_list = list(range(8))
     test_map = {str(test_list[i]): i for i in range(len(test_list))}
-    train_data = CapgDataset(gestures_label_map=test_map, gesture_list=test_list, sequence_len=10,
-                             frame_x=False, train=True)
-    print(train_data.data.shape)
-    print(train_data.targets.shape)
-    print(set(train_data.targets))
+    transforms_list = transforms.Compose([
+        # transforms.Resize((32, 32), interpolation=2),
+        transforms.ToTensor(),
+    ])
+    train_data = CapgDataset(gestures_label_map=test_map,
+                             gesture_list=test_list,
+                             sequence_len=10,
+                             frame_x=True,
+                             train=True,
+                             transform=transforms_list)
+    # print(train_data.data.shape)
+    # print(train_data.targets.shape)
+    # print(set(train_data.targets))
+    # print()
+    test_dataloader = DataLoader(dataset=train_data,
+                                 batch_size=2,
+                                 shuffle=False,
+                                 num_workers=1)
+    all_score = []
+    y_true_all = []
+    y_pred_all = []
+    for step, (batch_x, batch_y) in enumerate(test_dataloader):
+        print(step)
+        print(batch_x.size())
+        print(batch_y.size())
+        break
 
-    test_list = test_list[0:1]
-    test_data = CapgDataset(gestures_label_map=test_map, gesture_list=test_list, sequence_len=10,
-                            frame_x=False, train=False)
-    print(test_data.data.shape)
-    print(test_data.targets.shape)
-    print(set(test_data.targets))
+    # test_list = test_list[0:1]
+    # test_data = CapgDataset(gestures_label_map=test_map, gesture_list=test_list, sequence_len=10,
+    #                         frame_x=False, train=False)
+    # print(test_data.data.shape)
+    # print(test_data.targets.shape)
+    # print(set(test_data.targets))

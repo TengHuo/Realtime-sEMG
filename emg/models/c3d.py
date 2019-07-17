@@ -17,12 +17,6 @@ from emg.models.base import EMGClassifier
 from emg.data_loader.capg_data import CapgDataset
 
 
-# hyperparameters = {
-#     'input_size': (10, 16, 8),
-#     'hidden_size': 256
-# }
-
-
 class C3D(nn.Module):
     def __init__(self, output_size):
         super(C3D, self).__init__()
@@ -81,7 +75,9 @@ def main(train_args, TEST_MODE=False):
     # 1. 设置好optimizer
     # 2. 定义好model
     args = train_args
-    model = C3D(args['gesture_num'])
+    all_gestures = list(range(0, args['gesture_num']))
+
+    model = C3D(len(all_gestures))
     name = args['name']
     sub_folder = args['sub_folder']
 
@@ -91,45 +87,63 @@ def main(train_args, TEST_MODE=False):
     from emg.utils.lr_scheduler import DecayLR
     lr_callback = DecayLR(start_lr=args['lr'], gamma=0.5, step_size=args['lr_step'])
 
-    train_set = CapgDataset(gesture=args['gesture_num'],
-                            sequence_len=10,
-                            frame_x=True,
-                            test_mode=TEST_MODE,
-                            train=True)
-
     net = EMGClassifier(module=model,
                         model_name=name,
                         sub_folder=sub_folder,
                         hyperparamters=args,
                         optimizer=torch.optim.Adam,
-                        dataset=train_set,
+                        gesture_list=all_gestures,
                         callbacks=[tensorboard_cb, lr_callback])
 
-    net.fit_with_dataset()
+    net = train(net, all_gestures)
 
-    test_set = CapgDataset(gesture=args['gesture_num'],
+    net = test(net, all_gestures)
+
+    # test_gestures = all_gestures[0:1]
+    # net = test(net, test_gestures)
+    #
+    # test_gestures = all_gestures[1:2]
+    # net = test(net, test_gestures)
+    #
+    # test_gestures = all_gestures[2:3]
+    # net = test(net, test_gestures)
+
+
+def train(net: EMGClassifier, gesture_indices: list):
+    train_set = CapgDataset(gestures_label_map=net.gesture_map,
+                            sequence_len=10,
+                            frame_x=True,
+                            gesture_list=gesture_indices,
+                            train=True)
+    net.dataset = train_set
+    net.fit_with_dataset()
+    return net
+
+
+def test(net: EMGClassifier, gesture_indices: list):
+    test_set = CapgDataset(gestures_label_map=net.gesture_map,
                            sequence_len=10,
                            frame_x=True,
-                           test_mode=TEST_MODE,
+                           gesture_list=gesture_indices,
                            train=False)
 
-    avg_score = net.test_model(test_set)
+    avg_score = net.test_model(gesture_indices, test_set)
     print('test accuracy: {:.4f}'.format(avg_score))
+    return net
 
 
 if __name__ == "__main__":
     test_args = {
         'model': 'c3d',
-        'gesture_num': 12,
-        'lr': 0.001,
-        'lr_step': 5,
+        'suffix': 'test',
+        'sub_folder': 'test1',
         'epoch': 3,
-        'train_batch_size': 512,
+        'train_batch_size': 256,
         'valid_batch_size': 1024,
-        'stop_patience': 5,
-        'log_interval': 100,
-        'name': 'c3d-test',
-        'sub_folder': 'test2'
-    }
+        'lr': 0.001,
+        'lr_step': 5}
 
-    main(test_args, TEST_MODE=False)
+    print('test')
+    default_name = test_args['model'] + '-{}'.format(test_args['suffix'])
+    test_args['name'] = default_name
+    main(test_args)

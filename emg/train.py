@@ -27,8 +27,10 @@ import importlib
 def main(**args):
     module_name = 'emg.models.{}'.format(args['model'])
     model = importlib.import_module(module_name)
-    default_name = args['model'] + '-{}'.format(args['suffix'])
-    args['name'] = default_name
+    print('Train a new model: {}'.format(args['model']))
+
+    # default_name = args['model'] + '-{}'.format(args['suffix'])
+    args['name'] = args['suffix']
     model.main(args)
 
 
