@@ -1,6 +1,6 @@
-# -*- coding: UTF-8 -*-
-# c3d.py
-# @Time     : 06/Jun/2019
+# -*- coding: utf-8 -*-
+# c3d64.py
+# @Time     : 16/Jul/2019
 # @Author   : TENG HUO
 # @Email    : teng_huo@outlook.com
 # @Version  : 1.0.0
@@ -12,42 +12,44 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from torchvision import transforms
 
 from emg.models.base import EMGClassifier
 from emg.data_loader.capg_data import CapgDataset
 
 
-class C3D(nn.Module):
+class C3D64(nn.Module):
     def __init__(self, output_size):
-        super(C3D, self).__init__()
-        # self.conv1 = nn.Conv3d(1, 64, kernel_size=(3, 3, 3), padding=(1, 1, 1))
-        # self.pool1 = nn.MaxPool3d(kernel_size=(1, 2, 2), stride=(1, 2, 2))
-        #
-        # self.conv2 = nn.Conv3d(64, 128, kernel_size=(3, 3, 3), padding=(1, 1, 1))
-        # self.pool2 = nn.MaxPool3d(kernel_size=(2, 2, 2), stride=(2, 2, 2))
+        super(C3D64, self).__init__()
+        self.conv1 = nn.Conv3d(3, 64, kernel_size=(3, 3, 3), padding=(1, 1, 1))
+        self.pool1 = nn.MaxPool3d(kernel_size=(1, 2, 2), stride=(1, 2, 2))
 
-        self.conv3a = nn.Conv3d(1, 64, kernel_size=(3, 3, 3), padding=(1, 1, 1))
-        self.conv3b = nn.Conv3d(64, 64, kernel_size=(3, 3, 3), padding=(1, 1, 1))
-        self.pool3 = nn.MaxPool3d(kernel_size=(1, 2, 2), stride=(1, 2, 2))
+        self.conv2 = nn.Conv3d(64, 128, kernel_size=(3, 3, 3), padding=(1, 1, 1))
+        self.pool2 = nn.MaxPool3d(kernel_size=(2, 2, 2), stride=(2, 2, 2))
 
-        self.conv4a = nn.Conv3d(64, 128, kernel_size=(3, 3, 3), padding=(1, 1, 1))
-        self.conv4b = nn.Conv3d(128, 128, kernel_size=(3, 3, 3), padding=(1, 1, 1))
+        self.conv3a = nn.Conv3d(128, 256, kernel_size=(3, 3, 3), padding=(1, 1, 1))
+        self.conv3b = nn.Conv3d(256, 256, kernel_size=(3, 3, 3), padding=(1, 1, 1))
+        self.pool3 = nn.MaxPool3d(kernel_size=(2, 2, 2), stride=(2, 2, 2))
+
+        self.conv4a = nn.Conv3d(256, 512, kernel_size=(3, 3, 3), padding=(1, 1, 1))
+        self.conv4b = nn.Conv3d(512, 512, kernel_size=(3, 3, 3), padding=(1, 1, 1))
         self.pool4 = nn.MaxPool3d(kernel_size=(2, 2, 2), stride=(2, 2, 2))
 
-        self.conv5a = nn.Conv3d(128, 256, kernel_size=(3, 3, 3), padding=(1, 1, 1))
-        self.conv5b = nn.Conv3d(256, 256, kernel_size=(3, 3, 3), padding=(1, 1, 1))
-        self.pool5 = nn.MaxPool3d(kernel_size=(2, 2, 2), stride=(2, 2, 2), padding=(0, 1, 1))
+        # self.conv5a = nn.Conv3d(512, 512, kernel_size=(3, 3, 3), padding=(1, 1, 1))
+        # self.conv5b = nn.Conv3d(512, 512, kernel_size=(3, 3, 3), padding=(1, 1, 1))
+        # self.pool5 = nn.MaxPool3d(kernel_size=(2, 2, 2), stride=(2, 2, 2), padding=(1, 1, 1))
 
-        self.fc6 = nn.Linear(3072, 512)
-        self.fc7 = nn.Linear(512, 512)
-        self.fc8 = nn.Linear(512, output_size)
+        self.fc6 = nn.Linear(2048, 1024)
+        self.fc7 = nn.Linear(1024, 1024)
+        self.fc8 = nn.Linear(1024, output_size)
 
     def forward(self, x):
-        # x = F.relu(self.conv1(x))
-        # x = self.pool1(x)
-        #
-        # x = F.relu(self.conv2(x))
-        # x = self.pool2(x)
+
+        x = F.relu(self.conv1(x))
+        x = self.pool1(x)
+
+        x = F.relu(self.conv2(x))
+        x = self.pool2(x)
 
         x = F.relu(self.conv3a(x))
         x = F.relu(self.conv3b(x))
@@ -57,11 +59,11 @@ class C3D(nn.Module):
         x = F.relu(self.conv4b(x))
         x = self.pool4(x)
 
-        x = F.relu(self.conv5a(x))
-        x = F.relu(self.conv5b(x))
-        x = self.pool5(x)
+        # x = F.relu(self.conv5a(x))
+        # x = F.relu(self.conv5b(x))
+        # x = self.pool5(x)
 
-        x = x.view(-1, 3072)
+        x = x.view(-1, 2048)
         x = F.relu(self.fc6(x))
         x = F.dropout(x, p=0.2)
 
@@ -75,9 +77,9 @@ def main(train_args, TEST_MODE=False):
     # 1. 设置好optimizer
     # 2. 定义好model
     args = train_args
-    all_gestures = list(range(8, 20))
+    all_gestures = list(range(0, 8))
 
-    model = C3D(len(all_gestures))
+    model = C3D64(len(all_gestures))
     name = args['name']
     sub_folder = args['sub_folder']
 
@@ -110,22 +112,34 @@ def main(train_args, TEST_MODE=False):
 
 
 def train(net: EMGClassifier, gesture_indices: list):
+    transforms_list = transforms.Compose([
+        # transforms.Resize((32, 32), interpolation=2),
+        transforms.ToTensor(),
+    ])
+
     train_set = CapgDataset(gestures_label_map=net.gesture_map,
                             sequence_len=10,
                             frame_x=True,
                             gesture_list=gesture_indices,
-                            train=True)
+                            train=True,
+                            transform=transforms_list)
     net.dataset = train_set
     net.fit_with_dataset()
     return net
 
 
 def test(net: EMGClassifier, gesture_indices: list):
+    transforms_list = transforms.Compose([
+        # transforms.Resize((32, 32), interpolation=2),
+        transforms.ToTensor(),
+    ])
+
     test_set = CapgDataset(gestures_label_map=net.gesture_map,
                            sequence_len=10,
                            frame_x=True,
                            gesture_list=gesture_indices,
-                           train=False)
+                           train=False,
+                           transform=transforms_list)
 
     avg_score = net.test_model(gesture_indices, test_set)
     print('test accuracy: {:.4f}'.format(avg_score))
@@ -134,12 +148,12 @@ def test(net: EMGClassifier, gesture_indices: list):
 
 if __name__ == "__main__":
     test_args = {
-        'model': 'c3d',
+        'model': 'c3d64',
         'suffix': 'test',
-        'sub_folder': 'test1',
+        'sub_folder': 'test8',
         'epoch': 3,
-        'train_batch_size': 256,
-        'valid_batch_size': 1024,
+        'train_batch_size': 64,
+        'valid_batch_size': 512,
         'lr': 0.001,
         'lr_step': 5}
 

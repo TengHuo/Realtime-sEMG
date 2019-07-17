@@ -95,7 +95,7 @@ class CNN(nn.Module):
 
 def main(train_args, TEST_MODE=False):
     args = train_args
-    all_gestures = list(range(0, args['gesture_num']))
+    all_gestures = list(range(8, 20))
 
     model = CNN(len(all_gestures))
     name = args['name']

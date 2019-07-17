@@ -49,7 +49,7 @@ def main(train_args, TEST_MODE=False):
     # 1. 设置好optimizer
     # 2. 定义好model
     args = {**train_args, **hyperparameters}
-    all_gestures = list(range(0, args['gesture_num']))
+    all_gestures = list(range(8, 20))
     # all_gestures = list(range(0, 20))
     model = MLP(args['input_size'], args['hidden_size'], len(all_gestures))
     name = args['name']
