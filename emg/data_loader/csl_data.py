@@ -50,13 +50,14 @@ class CSLDataset(Dataset):
     """An abstract class representing a Dataset.
     """
 
-    def __init__(self, gesture, sequence_len, train,
-                 test_mode=False, transform=None):
+    def __init__(self, gesture, sequence_len,
+                 frame_x=False, train=True, transform=None):
 
         self.transform = transform
         self.train = train
         self.scale = 100
         self.seq_length = sequence_len
+        self.frame_x = frame_x
         gestures = map(lambda i: 'gest{}'.format(i), range(gesture))  # from gest0 to gestX
 
         root_path = os.path.join(os.sep, *os.path.dirname(os.path.realpath(__file__)).split(os.sep)[:-2])
@@ -75,8 +76,7 @@ class CSLDataset(Dataset):
             data_set = _save_csl_to_h5(train_set, test_set, train_data_path, test_data_path, self.train, gestures)
 
         X, y = _prepare_data(data_set)
-        if test_mode and self.train:
-            # for test code, only use small part of data
+        if False:  # for test code, only use small part of data
             self.data, self.targets = X[:64], y[:64]
         else:
             self.data, self.targets = X, y
@@ -91,12 +91,19 @@ class CSLDataset(Dataset):
         """
         true_index = math.floor(index / self.scale)
         x = self.data[true_index]
-        start = np.random.randint(0, x.shape[1] - self.seq_length)
-        end = start + self.seq_length
-        x = x[start:end]
+        start = np.random.randint(0, x.shape[0] - self.seq_length)
+        if self.seq_length > 1:
+            end = start + self.seq_length
+            x = x[start:end]
+        else:
+            x = x[start]
+
+        if self.frame_x:
+            x = x.reshape((8, 21))
 
         if self.transform is not None:
             x = self.transform(x)
+        x = x.astype('float32')
         y = self.targets[true_index]
         return x, y
 
@@ -256,11 +263,11 @@ if __name__ == '__main__':
     # 3. 用剩余subject的数据测试模型
 
     # test pytorch data loader
-    csl_train_data = CSLDataset(gesture=8, sequence_len=10, train=True)
-    print(len(csl_train_data.data))
-    print(len(csl_train_data.targets))
+    csl_train_data = CSLDataset(gesture=8, sequence_len=1, train=True)
+    # print(len(csl_train_data.data))
+    # print(len(csl_train_data.targets))
 
-    dataloader = DataLoader(csl_train_data, batch_size=1,
+    dataloader = DataLoader(csl_train_data, batch_size=2,
                             shuffle=True, num_workers=4)
 
     for i_batch, data in enumerate(dataloader):

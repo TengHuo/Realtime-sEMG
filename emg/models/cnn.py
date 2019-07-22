@@ -16,6 +16,7 @@ from torch.nn.modules.utils import _pair
 from emg.models.base import EMGClassifier
 from emg.utils import config_tensorboard
 from emg.data_loader.capg_data import CapgDataset
+from emg.data_loader.csl_data import CSLDataset
 
 
 class LocallyConnected2d(nn.Module):
@@ -128,23 +129,44 @@ def main(train_args, TEST_MODE=False):
     # net = test(net, test_gestures)
 
 
+# def train(net: EMGClassifier, gesture_indices: list):
+#     train_set = CapgDataset(gestures_label_map=net.gesture_map,
+#                             sequence_len=1,
+#                             frame_x=True,
+#                             gesture_list=gesture_indices,
+#                             train=True)
+#     net.dataset = train_set
+#     net.fit_with_dataset()
+#     return net
+#
+#
+# def test(net: EMGClassifier, gesture_indices: list):
+#     test_set = CapgDataset(gestures_label_map=net.gesture_map,
+#                            sequence_len=1,
+#                            frame_x=True,
+#                            gesture_list=gesture_indices,
+#                            train=False)
+#
+#     avg_score = net.test_model(gesture_indices, test_set)
+#     print('test accuracy: {:.4f}'.format(avg_score))
+#     return net
+
+
 def train(net: EMGClassifier, gesture_indices: list):
-    train_set = CapgDataset(gestures_label_map=net.gesture_map,
-                            sequence_len=1,
-                            frame_x=True,
-                            gesture_list=gesture_indices,
-                            train=True)
+    train_set = CSLDataset(gesture=8,
+                           sequence_len=1,
+                           frame_x=True,
+                           train=True)
     net.dataset = train_set
     net.fit_with_dataset()
     return net
 
 
 def test(net: EMGClassifier, gesture_indices: list):
-    test_set = CapgDataset(gestures_label_map=net.gesture_map,
-                           sequence_len=1,
-                           frame_x=True,
-                           gesture_list=gesture_indices,
-                           train=False)
+    test_set = CSLDataset(gesture=8,
+                          sequence_len=1,
+                          frame_x=True,
+                          train=False)
 
     avg_score = net.test_model(gesture_indices, test_set)
     print('test accuracy: {:.4f}'.format(avg_score))
@@ -154,16 +176,16 @@ def test(net: EMGClassifier, gesture_indices: list):
 if __name__ == "__main__":
     test_args = {
         'model': 'cnn',
-        'suffix': 'test-evaluation',
-        'sub_folder': 'ConvNet',
+        'suffix': 'test-csl',
+        'sub_folder': 'test1',
         # 'gesture_num': 8,
-        'epoch': 120,
+        'epoch': 10,
         'train_batch_size': 128,
         'valid_batch_size': 1024,
         'lr': 0.001,
         'lr_step': 50}
 
     print('test')
-    # default_name = test_args['model'] + '-{}'.format(test_args['suffix'])
-    test_args['name'] = '8Gesture_Compare'
+    default_name = test_args['model'] + '-{}'.format(test_args['suffix'])
+    test_args['name'] = default_name
     main(test_args, TEST_MODE=False)
