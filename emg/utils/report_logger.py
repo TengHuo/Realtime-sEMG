@@ -14,6 +14,7 @@ from datetime import datetime
 
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
 from skorch.callbacks import Callback
 
 
@@ -121,7 +122,8 @@ def save_evaluation(report_folder: str, test_name: str, confusion_matrix, score:
         with open(report_path, 'r+') as f:
             report = f.read()
             report += 'Test name: {}, \n\nAverage accuracy: {:.4f}\n\n\n'.format(test_name, score)
-            report += str(confusion_matrix)
+            matrix_string = pd.DataFrame(confusion_matrix).to_csv(header=False, index=False)
+            report += matrix_string
             # report = report.replace('{{evaluation}}', '{:.4f}'.format(score))
             f.seek(0)
             f.truncate()

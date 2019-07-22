@@ -95,7 +95,7 @@ class CNN(nn.Module):
 
 def main(train_args, TEST_MODE=False):
     args = train_args
-    all_gestures = list(range(8, 20))
+    all_gestures = list(range(20))
 
     model = CNN(len(all_gestures))
     name = args['name']
@@ -114,7 +114,7 @@ def main(train_args, TEST_MODE=False):
                         gesture_list=all_gestures,
                         callbacks=[tensorboard_cb, lr_callback])
 
-    net = train(net, all_gestures)
+    # net = train(net, all_gestures)
 
     net = test(net, all_gestures)
 
@@ -156,8 +156,7 @@ if __name__ == "__main__":
         'model': 'cnn',
         'suffix': 'test-evaluation',
         'sub_folder': 'ConvNet',
-        # 'gesture_num': 8,
-        'epoch': 120,
+        'epoch': 30,
         'train_batch_size': 128,
         'valid_batch_size': 1024,
         'lr': 0.001,
@@ -165,5 +164,7 @@ if __name__ == "__main__":
 
     print('test')
     # default_name = test_args['model'] + '-{}'.format(test_args['suffix'])
-    test_args['name'] = '8Gesture_Compare'
+    # test_args['name'] = '8Gesture_Compare'
+    # test_args['name'] = '12Gesture_Compare'
+    test_args['name'] = '20Gesture_Compare'
     main(test_args, TEST_MODE=False)

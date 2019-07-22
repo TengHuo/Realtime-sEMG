@@ -49,7 +49,7 @@ def main(train_args, TEST_MODE=False):
     # 1. 设置好optimizer
     # 2. 定义好model
     args = {**train_args, **hyperparameters}
-    all_gestures = list(range(8, 20))
+    all_gestures = list(range(20))
     # all_gestures = list(range(0, 20))
     model = MLP(args['input_size'], args['hidden_size'], len(all_gestures))
     name = args['name']
@@ -68,7 +68,7 @@ def main(train_args, TEST_MODE=False):
                         gesture_list=all_gestures,
                         callbacks=[tensorboard_cb, lr_callback])
 
-    net = train(net, all_gestures)
+    # net = train(net, all_gestures)
 
     net = test(net, all_gestures)
 
@@ -107,14 +107,18 @@ if __name__ == "__main__":
     test_args = {
         'model': 'mlp',
         'suffix': 'test-evaluation',
-        'sub_folder': 'test6',
-        'epoch': 10,
+        'sub_folder': 'MLP',
+        'epoch': 30,
         'train_batch_size': 512,
         'valid_batch_size': 2048,
         'lr': 0.001,
-        'lr_step': 50}
+        'lr_step': 10}
 
     print('test')
-    default_name = test_args['model'] + '-{}'.format(test_args['suffix'])
-    test_args['name'] = default_name
+    # default_name = test_argsg['model'] + '-{}'.format(test_args['suffix'])
+    # test_args['name'] = default_name
+    # test_args['name'] = '8Gesture_Compare'
+    # test_args['name'] = '12Gesture_Compare'
+    test_args['name'] = '20Gesture_Compare'
+
     main(test_args)

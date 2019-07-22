@@ -75,7 +75,7 @@ def main(train_args, TEST_MODE=False):
     # 1. 设置好optimizer
     # 2. 定义好model
     args = train_args
-    all_gestures = list(range(8, 20))
+    all_gestures = list(range(20))
 
     model = C3D(len(all_gestures))
     name = args['name']
@@ -95,7 +95,7 @@ def main(train_args, TEST_MODE=False):
                         gesture_list=all_gestures,
                         callbacks=[tensorboard_cb, lr_callback])
 
-    net = train(net, all_gestures)
+    # net = train(net, all_gestures)
 
     net = test(net, all_gestures)
 
@@ -136,7 +136,7 @@ if __name__ == "__main__":
     test_args = {
         'model': 'c3d',
         'suffix': 'test',
-        'sub_folder': 'test1',
+        'sub_folder': 'C3D',
         'epoch': 3,
         'train_batch_size': 256,
         'valid_batch_size': 1024,
@@ -144,6 +144,9 @@ if __name__ == "__main__":
         'lr_step': 5}
 
     print('test')
-    default_name = test_args['model'] + '-{}'.format(test_args['suffix'])
-    test_args['name'] = default_name
+    # default_name = test_args['model'] + '-{}'.format(test_args['suffix'])
+    # test_args['name'] = default_name
+    # test_args['name'] = '8Gesture_Compare'
+    # test_args['name'] = '12Gesture_Compare'
+    test_args['name'] = '20Gesture_Compare'
     main(test_args)
