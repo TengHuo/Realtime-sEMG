@@ -55,7 +55,7 @@ def main(train_args, TEST_MODE=False):
     # 1. 设置好optimizer
     # 2. 定义好model
     args = {**train_args, **hyperparameters}
-    all_gestures = list(range(20))
+    all_gestures = list(range(8))
 
     model = LSTM(args['input_size'], args['hidden_size'], len(all_gestures),
                  args['layer'], args['dropout'])
@@ -136,7 +136,8 @@ if __name__ == "__main__":
 
     # test_args['name'] = '8Gesture_Compare'
     # test_args['name'] = '12Gesture_Compare'
-    test_args['name'] = '20Gesture_Compare'
+    # test_args['name'] = '20Gesture_Compare'
+    test_args['name'] = 'Test_DownSampling'
     main(test_args)
 
     # for i in [10, 15, 20, 30, 50]:

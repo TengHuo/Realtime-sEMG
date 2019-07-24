@@ -75,7 +75,7 @@ def main(train_args, TEST_MODE=False):
     # 1. 设置好optimizer
     # 2. 定义好model
     args = train_args
-    all_gestures = list(range(20))
+    all_gestures = list(range(8))
 
     model = C3D(len(all_gestures))
     name = args['name']
@@ -148,5 +148,6 @@ if __name__ == "__main__":
     # test_args['name'] = default_name
     # test_args['name'] = '8Gesture_Compare'
     # test_args['name'] = '12Gesture_Compare'
-    test_args['name'] = '20Gesture_Compare'
+    # test_args['name'] = '20Gesture_Compare'
+    test_args['name'] = 'Test_DownSampling'
     main(test_args)

@@ -102,9 +102,16 @@ class CapgDataset(Dataset):
         true_index = math.floor(index/self.scale)
         x, y = self.data[true_index], self.targets[true_index]
         # x.shape is (1000, 128)
-        start = np.random.randint(0, 1000 - self.seq_length)
-        end = start + self.seq_length
-        x = x[start:end]  # now x.shape is (N, 128)
+        x = downsampling(x, self.seq_length, 1)
+        # x = downsampling(x, self.seq_length, 2)
+        # x = downsampling(x, self.seq_length, 3)
+        # x = downsampling(x, self.seq_length, 4)
+        # x = downsampling(x, self.seq_length, 5)
+        # x = downsampling(x, self.seq_length, 10)
+        # x = downsampling(x, self.seq_length, 15)
+        # x = downsampling(x, self.seq_length, 20)
+        # x = downsampling(x, self.seq_length, 48)
+        # now x.shape is (N, 128)
 
         if self.frame_x:
             # x shape is (N, 128), reshape to frame format: (N, 16, 8)
@@ -141,6 +148,27 @@ class CapgDataset(Dataset):
 
     def __len__(self):
         return self.data.shape[0] * self.scale
+
+
+def random_pick(sequence, length):
+    start = np.random.randint(0, sequence.shape[0] - length)
+    end = start + length
+    sub_seq = sequence[start:end]
+    return sub_seq
+
+
+def downsampling(sequence, length, rate):
+    sub_seq = sequence[0:1000:rate]
+    return random_pick(sub_seq, length)
+
+
+def downscale(sequence, rate):
+    sub_seq = sequence[:, ::rate, ::rate]
+    return sub_seq
+
+
+def interpolation():
+    pass
 
 
 def _prepare_data(raw_data, gesture_dict, required_gestures):
