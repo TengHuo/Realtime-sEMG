@@ -13,7 +13,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from emg.models.siamese import EMGSiamese
+from emg.models.siamese import SiameseEMG
 from emg.utils import config_tensorboard
 from emg.data_loader.capg_triplet import CapgTriplet
 
@@ -25,21 +25,22 @@ class SiameseMLP(nn.Module):
         self.bn2 = nn.BatchNorm1d(hidden_size)
         self.fc1 = nn.Linear(input_size, hidden_size)
         self.fc2 = nn.Linear(hidden_size, hidden_size)
-        self.fc3 = nn.Linear(hidden_size, 2)
+        self.fc3 = nn.Linear(hidden_size, 128)
 
-    def forward(self, x):
-        res = []
-        for i in range(2):
-            xi = x[i]
-            xi = self.bn1(xi)
-            xi = self.fc1(xi)
-            xi = F.relu(xi)
-            xi = self.fc2(xi)
-            xi = self.bn2(xi)
-            res.append(F.relu(xi))
-        pred = torch.abs(res[1] - res[0])
-        pred = self.fc3(pred)
+    def embedding(self, x):
+        x = self.bn1(x)
+        x = self.fc1(x)
+        x = F.relu(x)
+        x = self.fc2(x)
+        x = self.bn2(x)
+        pred = self.fc3(x)
         return pred
+
+    def forward(self, anchor, positive, negative):
+        embedded_anchor = self.embedding(anchor)
+        embedded_positive = self.embedding(positive)
+        embedded_negative = self.embedding(negative)
+        return embedded_anchor, embedded_positive, embedded_negative
 
 
 hyperparameters = {
@@ -61,20 +62,15 @@ def main(train_args, TEST_MODE=False):
     # from emg.utils.lr_scheduler import DecayLR
     # lr_callback = DecayLR(start_lr=args['lr'], gamma=0.5, step_size=args['lr_step'])
 
-    train_set = CapgTriplet(gesture=args['gesture_num'],
-                            sequence_len=1,
-                            test_mode=TEST_MODE,
-                            train=True)
-
-    net = EMGSiamese(module=model,
+    net = SiameseEMG(module=model,
                      model_name=name,
                      sub_folder=sub_folder,
                      hyperparamters=args,
                      optimizer=torch.optim.Adam,
-                     dataset=train_set)
-                     # callbacks=[tensorboard_cb, lr_callback])
+                     gesture_list=[],
+                     callbacks=[])
 
-    net.fit_with_dataset()
+    train(net)
 
     # test_set = CapgTriplet(gesture=args['gesture_num'],
     #                        sequence_len=1,
@@ -85,17 +81,27 @@ def main(train_args, TEST_MODE=False):
     # print('test accuracy: {:.4f}'.format(avg_score))
 
 
+def train(net: SiameseEMG):
+    gesture_list = list(range(8))
+    train_set = CapgTriplet(gesture_list,
+                            sequence_len=1,
+                            frame_x=False,
+                            train=True)
+    net.dataset = train_set
+    net.fit_with_dataset()
+    return net
+
+
 if __name__ == "__main__":
     test_args = {
         'model': 'siamese_mlp',
         'suffix': 'test',
-        'sub_folder': 'test1',
-        'gesture_num': 8,
-        'epoch': 1,
+        'sub_folder': 'test7',
+        'epoch': 30,
         'train_batch_size': 512,
         'valid_batch_size': 2048,
         'lr': 0.001,
-        'lr_step': 50}
+        'lr_step': 20}
 
     print('test')
     test_args['name'] = test_args['model'] + '-{}'.format(test_args['suffix'])

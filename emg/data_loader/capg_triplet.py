@@ -29,15 +29,13 @@ class CapgTriplet(Dataset):
     supporting integer indexing in range from 0 to len(self) exclusive.
     """
 
-    def __init__(self, gesture, sequence_len, sequence_result=False,
-                 frame_x=False, train=True, test_mode=False, transform=None):
+    def __init__(self, gesture_list, sequence_len,
+                 frame_x=False, train=True, transform=None):
 
         self.transform = transform
         self.train = train  # training set or test set
         self.seq_length = sequence_len
         self.frame_x = frame_x  # x is frame format or not
-
-        self.scale = 100
 
         root_path = os.path.join(os.sep, *os.path.dirname(os.path.realpath(__file__)).split(os.sep)[:-2])
         processed_data = os.path.join(root_path, 'data', 'capg-processed')
@@ -54,17 +52,12 @@ class CapgTriplet(Dataset):
             _save_capg_to_h5(train_set, test_set, train_data_path, test_data_path)
 
         if self.train:
-            self._emg_data = train_set
-            x = _prepare_triplet_index_pairs(train_set)
+            self._emg_data = _prepare_data(train_set, gesture_list)
         else:
-            self._emg_data = test_set
-            x = _prepare_triplet_index_pairs(test_set)
+            self._emg_data = _prepare_data(test_set, gesture_list)
 
-        if test_mode and self.train:
-            # for test code, only use small part of data
-            self.data = x[:64]
-        else:
-            self.data = x
+        self.scale = 380000
+        self.gesture_amount = len(gesture_list)
 
     def __getitem__(self, index):
         """根据index返回triplet的data pairs
@@ -74,55 +67,54 @@ class CapgTriplet(Dataset):
         Returns:
             tuple: (X, target) where target is index of the target class.
         """
-        triplet_index = self.data[index]
-        triplet_emg = []
-        for emg_index in triplet_index:
-            emg_segment = self._emg_data[emg_index[0]][emg_index[1]]
+        true_index = index // self.scale
+        gesture_idx = true_index % self.gesture_amount
+        amount = len(self._emg_data[gesture_idx])
+        anchor_idx, positive_idx = np.random.choice(amount, 2, replace=False)
+        rest_gestures = list(self._emg_data.keys())
+        rest_gestures.remove(gesture_idx)
+        negative_gesture_idx = np.random.choice(rest_gestures)
+        amount = len(self._emg_data[negative_gesture_idx])
+        negative_idx = np.random.choice(amount)
 
+        anchor = self._emg_data[gesture_idx][anchor_idx]
+        positive = self._emg_data[gesture_idx][positive_idx]
+        negative = self._emg_data[negative_gesture_idx][negative_idx]
+
+        triplet_emg = [anchor, positive, negative]
+
+        for i in range(len(triplet_emg)):
+            emg_segment = triplet_emg[i]
             start = np.random.randint(0, 1000 - self.seq_length)
             end = start + self.seq_length
             emg_segment = emg_segment[start:end]  # now x.shape is (N, 128)
 
-            if self.frame_x:
-                # x shape is (N, 128), reshape to frame format: (N, 16, 8)
-                if self.seq_length == 1:
-                    # used for 2d cnn
-                    emg_segment = emg_segment.reshape((1, 16, 8))
-                else:
-                    # used for 3d cnn
-                    emg_segment = emg_segment.reshape((1, emg_segment.shape[0], 16, 8))
-            elif self.seq_length == 1:
-                emg_segment = emg_segment[0]
-
-            triplet_emg.append(torch.tensor(emg_segment, dtype=torch.float))
-        target = torch.tensor([1, 0])
+            # if self.frame_x:
+            #     # x shape is (N, 128), reshape to frame format: (N, 16, 8)
+            #     if self.seq_length == 1:
+            #         # used for 2d cnn
+            #         emg_segment = emg_segment.reshape((1, 16, 8))
+            #     else:
+            #         # used for 3d cnn
+            #         emg_segment = emg_segment.reshape((1, emg_segment.shape[0], 16, 8))
+            # elif self.seq_length == 1:
+            #     print(emg_segment.shape)
+            #     emg_segment = emg_segment[0]
+            # print(emg_segment.shape)
+            emg_segment = emg_segment[0]
+            triplet_emg[i] = torch.tensor(emg_segment, dtype=torch.float)
+        target = torch.tensor([0])
         return triplet_emg, target
 
     def __len__(self):
-        return len(self.data)
+        return self.scale * self.gesture_amount
 
 
-def _prepare_triplet_index_pairs(raw_data: dict):
-    """TODO: 优化一下生成算法，尽量避免循环
+def _prepare_data(raw_data: dict, gesture_list):
     """
-    x = list()
-    gesture_set = list(raw_data.keys())
-    for gesture in raw_data.keys():
-        segment_len = raw_data[gesture].shape[0]
-        for i in range(segment_len):
-            anchor = [(gesture, i)] * segment_len
-            positive = [(gesture, j) for j in range(segment_len)]
-            for j in range(segment_len):
-                remain_gestures = gesture_set.copy()
-                remain_gestures.remove(gesture)
-                negative_gesture = random.choice(remain_gestures)
-                idx_list = list(range(raw_data[negative_gesture].shape[0]))
-                negative_idx = random.choice(idx_list)
-                negative = (negative_gesture, negative_idx)
-
-                x.append([anchor[j], positive[j], negative])
-
-    return x
+    """
+    emg_data = {gesture_idx: raw_data[gesture_idx] for gesture_idx in gesture_list}
+    return emg_data
 
 
 def _load_capg_all():
@@ -216,13 +208,16 @@ def _read_capg_mat_files(path, mat_list):
 
 if __name__ == '__main__':
     # test pytorch data loader
-    train_data = CapgTriplet(gesture=8, sequence_len=10, sequence_result=False,
-                             frame_x=False, train=True, transform=None)
-    print(len(train_data.data))
+    test_list = list(range(8))
+    train_data = CapgTriplet(test_list, sequence_len=1,
+                             frame_x=False, train=True)
+    print(len(train_data))
     dataloader = DataLoader(train_data, batch_size=2,
                             shuffle=True, num_workers=4)
-    for i_batch, (data, target) in enumerate(dataloader):
+    for i_batch, (xi, yi) in enumerate(dataloader):
         # print(i_batch)
-        print(type(data))
-        print(target)
+        print(len(xi))
+        for i in xi:
+            print(i.size())
+        print(yi)
         break
