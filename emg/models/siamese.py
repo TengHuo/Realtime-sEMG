@@ -25,6 +25,9 @@ from emg.utils.report_logger import ReportLog, save_evaluation
 from emg.utils.lr_scheduler import DecayLR
 from emg.utils.progressbar import ProgressBar
 
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.svm import SVC
+
 
 class SiameseEMG(NeuralNet):
     def __init__(self,
@@ -56,6 +59,11 @@ class SiameseEMG(NeuralNet):
         self.distance = PairwiseDistance().to(self.device)
         self.model_path = generate_folder('checkpoints', model_name, sub_folder=sub_folder)
 
+        self.clf = KNeighborsClassifier(n_neighbors=5)
+        self.clf_fit = False
+        self.anchors = []
+        self.labels = []
+
         # if continue_train:
         #     params = self.model_path + 'train_end_params.pt'
         #     optimizer = self.model_path + 'train_end_optimizer.pt'
@@ -69,7 +77,8 @@ class SiameseEMG(NeuralNet):
         #         raise FileNotFoundError()
         # else:
         print('build a new model, init parameters of {}'.format(model_name))
-        self.module.apply(init_parameters)
+        param_dict = self.load_pretrained("pretrained_end_params.pt")
+        self.module.load_state_dict(param_dict)
 
     @property
     def _default_callbacks(self):
@@ -113,6 +122,23 @@ class SiameseEMG(NeuralNet):
 
         return default_cb_list
 
+    def load_pretrained(self, param_file: str):
+        # pretrained_dict = model_zoo.load_url(model_urls['resnet152'])
+        # model_dict = model.state_dict()
+        # # 将pretrained_dict里不属于model_dict的键剔除掉
+        # pretrained_dict = {k: v for k, v in pretrained_dict.items() if k in model_dict}
+        # # 更新现有的model_dict
+        # model_dict.update(pretrained_dict)
+        # # 加载我们真正需要的state_dict
+        # model.load_state_dict(model_dict)
+        dict_path = os.path.join(self.model_path, "..", param_file)
+        pretrained_dict = torch.load(dict_path, map_location=self.device)
+        model_dict = self.module.state_dict()
+        pretrained_dict = {k: v for k, v in pretrained_dict.items() if k in model_dict}
+        model_dict.update(pretrained_dict)
+        print("load pretrained parameters from: {}".format(dict_path))
+        return model_dict
+
     def triplet_infer(self, x):
         """Perform a single inference step on a batch of data.
 
@@ -128,20 +154,20 @@ class SiameseEMG(NeuralNet):
     def get_triplet_loss(self, anchor, postive, negative):
         return self.criterion_(anchor, postive, negative)
 
-    def euclidean_distance(self, anchor, positive, negative):
-        # 如果negative-anchor > anchor-positive:
-        #     y_pred为0
-        # else
-        #     y_pred为1
-        ####################################
-        # TODO: 重写y_pred，直接预测gesture的id
-        positive_distance = self.distance(anchor, positive)
-        negative_distance = self.distance(anchor, negative)
-        margin = negative_distance - positive_distance + 1
-        margin[margin > 0] = 0
-        margin[margin < 0] = 1
-        ####################################
-        return margin
+    # def euclidean_distance(self, anchor, positive, negative):
+    #     # 如果negative-anchor > anchor-positive:
+    #     #     y_pred为0
+    #     # else
+    #     #     y_pred为1
+    #     ####################################
+    #     # 后面需要加一个KNN，每个gesture保存64个sample用来预测gesture
+    #     positive_distance = self.distance(anchor, positive)
+    #     negative_distance = self.distance(anchor, negative)
+    #     margin = negative_distance - positive_distance + 1
+    #     margin[margin > 0] = 0
+    #     margin[margin < 0] = 1
+    #     ####################################
+    #     return margin
 
     def validation_step(self, Xi, yi, **fit_params):
         """Perform a forward step using batched data and return the
@@ -164,7 +190,18 @@ class SiameseEMG(NeuralNet):
         with torch.no_grad():
             anchor, positive, negative = self.triplet_infer(Xi)
             loss = self.get_triplet_loss(anchor, positive, negative)
-            y_pred = self.euclidean_distance(anchor, positive, negative)
+
+            # TODO: 重写y_pred，直接预测gesture的id
+            # y_pred = self.euclidean_distance(anchor, positive, negative)
+            if not self.clf_fit:
+                self.labels = self.labels.ravel()
+                self.clf.fit(self.anchors, self.labels)
+                self.clf_fit = True
+            embedded = positive.data.cpu().numpy()
+            y_pred = self.clf.predict(embedded)
+            # print(y_pred.shape)
+            y_pred = torch.from_numpy(y_pred)
+
         return {
             'loss': loss,
             'y_pred': y_pred}
@@ -187,7 +224,12 @@ class SiameseEMG(NeuralNet):
         self.module_.train()
         self.optimizer_.zero_grad()
         anchor, positive, negative = self.triplet_infer(xi)
-        y_pred = self.euclidean_distance(anchor, positive, negative)
+
+        # y_pred = self.euclidean_distance(anchor, positive, negative)
+        self.anchors = anchor.data.cpu().numpy()
+        self.labels = yi.data.cpu().numpy()
+        self.clf_fit = False
+
         loss = self.get_triplet_loss(anchor, positive, negative)
         loss.backward()
 
@@ -199,7 +241,7 @@ class SiameseEMG(NeuralNet):
         )
 
         return {'loss': loss,
-                'y_pred': y_pred}
+                'y_pred': None}
 
     def train_step(self, Xi, yi, **fit_params):
         """Override the function for siamese training,

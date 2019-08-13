@@ -89,21 +89,18 @@ class CapgTriplet(Dataset):
             end = start + self.seq_length
             emg_segment = emg_segment[start:end]  # now x.shape is (N, 128)
 
-            # if self.frame_x:
-            #     # x shape is (N, 128), reshape to frame format: (N, 16, 8)
-            #     if self.seq_length == 1:
-            #         # used for 2d cnn
-            #         emg_segment = emg_segment.reshape((1, 16, 8))
-            #     else:
-            #         # used for 3d cnn
-            #         emg_segment = emg_segment.reshape((1, emg_segment.shape[0], 16, 8))
-            # elif self.seq_length == 1:
-            #     print(emg_segment.shape)
-            #     emg_segment = emg_segment[0]
-            # print(emg_segment.shape)
-            emg_segment = emg_segment[0]
+            if self.frame_x:
+                # x shape is (N, 128), reshape to frame format: (N, 16, 8)
+                if self.seq_length == 1:
+                    # used for 2d cnn
+                    emg_segment = emg_segment.reshape((1, 16, 8))
+                else:
+                    # used for 3d cnn
+                    emg_segment = emg_segment.reshape((1, emg_segment.shape[0], 16, 8))
+            elif self.seq_length == 1:
+                emg_segment = emg_segment[0]
             triplet_emg[i] = torch.tensor(emg_segment, dtype=torch.float)
-        target = torch.tensor([0])
+        target = torch.tensor([gesture_idx])
         return triplet_emg, target
 
     def __len__(self):
@@ -209,8 +206,10 @@ def _read_capg_mat_files(path, mat_list):
 if __name__ == '__main__':
     # test pytorch data loader
     test_list = list(range(8))
-    train_data = CapgTriplet(test_list, sequence_len=1,
-                             frame_x=False, train=True)
+    train_data = CapgTriplet(test_list,
+                             sequence_len=10,
+                             frame_x=True,
+                             train=True)
     print(len(train_data))
     dataloader = DataLoader(train_data, batch_size=2,
                             shuffle=True, num_workers=4)

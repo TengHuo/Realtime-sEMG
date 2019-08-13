@@ -13,6 +13,7 @@ import re
 import math
 import h5py
 
+import torch
 from torch.utils.data import DataLoader, Dataset
 from scipy.io import loadmat
 import numpy as np
@@ -51,12 +52,14 @@ class CSLDataset(Dataset):
     """
 
     def __init__(self, gesture, sequence_len, train,
-                 test_mode=False, transform=None):
+                 frame_x=False, test_mode=False, transform=None):
 
         self.transform = transform
         self.train = train
         self.scale = 100
         self.seq_length = sequence_len
+        self.frame_x = frame_x
+
         gestures = map(lambda i: 'gest{}'.format(i), range(gesture))  # from gest0 to gestX
 
         root_path = os.path.join(os.sep, *os.path.dirname(os.path.realpath(__file__)).split(os.sep)[:-2])
@@ -91,10 +94,21 @@ class CSLDataset(Dataset):
         """
         true_index = math.floor(index / self.scale)
         x = self.data[true_index]
-        start = np.random.randint(0, x.shape[1] - self.seq_length)
+        start = np.random.randint(0, x.shape[0] - self.seq_length)
         end = start + self.seq_length
         x = x[start:end]
+        if self.frame_x:
+            if self.seq_length == 1:
+                # used for 2d cnn
+                x = x.reshape((1, 21, 8))
+            else:
+                # used for 3d cnn
+                x = x.reshape((1, x.shape[0], 21, 8))
+        elif self.seq_length == 1:
+            x = np.squeeze(x)
 
+        x = torch.from_numpy(x)
+        x = x.float()
         if self.transform is not None:
             x = self.transform(x)
         y = self.targets[true_index]
@@ -256,19 +270,19 @@ if __name__ == '__main__':
     # 3. 用剩余subject的数据测试模型
 
     # test pytorch data loader
-    csl_train_data = CSLDataset(gesture=8, sequence_len=10, train=True)
+    csl_train_data = CSLDataset(gesture=8, sequence_len=1, train=True)
     print(len(csl_train_data.data))
     print(len(csl_train_data.targets))
 
-    dataloader = DataLoader(csl_train_data, batch_size=1,
+    dataloader = DataLoader(csl_train_data, batch_size=512,
                             shuffle=True, num_workers=4)
 
     for i_batch, data in enumerate(dataloader):
         print(i_batch)
         print(data[0].size())
-        print(data[1])
-        break
+        # print(data[1])
+        # break
 
-    csl_test_data = CSLDataset(gesture=8, sequence_len=10, train=False)
-    print(len(csl_test_data.data))
-    print(len(csl_test_data.targets))
+    # csl_test_data = CSLDataset(gesture=8, sequence_len=10, train=False)
+    # print(len(csl_test_data.data))
+    # print(len(csl_test_data.targets))

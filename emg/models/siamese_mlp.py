@@ -25,7 +25,7 @@ class SiameseMLP(nn.Module):
         self.bn2 = nn.BatchNorm1d(hidden_size)
         self.fc1 = nn.Linear(input_size, hidden_size)
         self.fc2 = nn.Linear(hidden_size, hidden_size)
-        self.fc3 = nn.Linear(hidden_size, 128)
+        self.pred = nn.Linear(hidden_size, 128)
 
     def embedding(self, x):
         x = self.bn1(x)
@@ -33,8 +33,7 @@ class SiameseMLP(nn.Module):
         x = F.relu(x)
         x = self.fc2(x)
         x = self.bn2(x)
-        pred = self.fc3(x)
-        return pred
+        return self.pred(x)
 
     def forward(self, anchor, positive, negative):
         embedded_anchor = self.embedding(anchor)
@@ -95,14 +94,13 @@ def train(net: SiameseEMG):
 if __name__ == "__main__":
     test_args = {
         'model': 'siamese_mlp',
-        'suffix': 'test',
-        'sub_folder': 'test7',
-        'epoch': 30,
+        'name': 'siamese-mlp',
+        'sub_folder': 'test1',
+        'epoch': 10,
         'train_batch_size': 512,
         'valid_batch_size': 2048,
         'lr': 0.001,
         'lr_step': 20}
 
     print('test')
-    test_args['name'] = test_args['model'] + '-{}'.format(test_args['suffix'])
     main(test_args, TEST_MODE=False)

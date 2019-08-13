@@ -132,7 +132,7 @@ class CapgDataset(Dataset):
                 cm_hot = cm.get_cmap('seismic')
                 im = Image.fromarray(np.uint8(cm_hot(frame)*255))
                 im = im.convert("RGB")
-                im = im.resize((32, 32), resample=PIL.Image.BILINEAR)
+                im = im.resize((24, 24), resample=PIL.Image.BILINEAR)
                 im = self.transform(im)
                 im.resize_((im.size(0), 1, im.size(1), im.size(2)))
                 # print(im.min())
@@ -150,6 +150,11 @@ class CapgDataset(Dataset):
         return self.data.shape[0] * self.scale
 
 
+def head_pick(sequence, length):
+    sub_seq = sequence[0:length]
+    return sub_seq
+
+
 def random_pick(sequence, length):
     start = np.random.randint(0, sequence.shape[0] - length)
     end = start + length
@@ -158,8 +163,9 @@ def random_pick(sequence, length):
 
 
 def downsampling(sequence, length, rate):
-    sub_seq = sequence[0:1000:rate]
-    return random_pick(sub_seq, length)
+    sequence = sequence[0:1000:rate]
+    # return random_pick(sub_seq, length)
+    return head_pick(sequence, length)
 
 
 def downscale(sequence, rate):

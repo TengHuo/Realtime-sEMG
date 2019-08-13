@@ -1,6 +1,6 @@
-# -*- coding: UTF-8 -*-
-# c3d.py
-# @Time     : 06/Jun/2019
+# -*- coding: utf-8 -*-
+# siamese_c3d.py
+# @Time     : 27/Jul/2019
 # @Author   : TENG HUO
 # @Email    : teng_huo@outlook.com
 # @Version  : 1.0.0
@@ -13,13 +13,13 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from emg.models.base import EMGClassifier
-from emg.data_loader.capg_data import CapgDataset
+from emg.models.siamese import SiameseEMG
+from emg.data_loader.capg_triplet import CapgTriplet
 
 
-class C3D(nn.Module):
+class SiameseC3D(nn.Module):
     def __init__(self, output_size):
-        super(C3D, self).__init__()
+        super(SiameseC3D, self).__init__()
         # self.conv1 = nn.Conv3d(1, 64, kernel_size=(3, 3, 3), padding=(1, 1, 1))
         # self.pool1 = nn.MaxPool3d(kernel_size=(1, 2, 2), stride=(1, 2, 2))
         #
@@ -40,9 +40,9 @@ class C3D(nn.Module):
 
         self.fc6 = nn.Linear(3072, 512)
         self.fc7 = nn.Linear(512, 512)
-        self.fc8 = nn.Linear(512, output_size)
+        self.output = nn.Linear(512, 128)
 
-    def forward(self, x):
+    def embedding(self, x):
         # x = F.relu(self.conv1(x))
         # x = self.pool1(x)
         #
@@ -67,37 +67,43 @@ class C3D(nn.Module):
 
         x = F.relu(self.fc7(x))
         x = F.dropout(x, p=0.2)
-        output = self.fc8(x)
+        output = self.output(x)
         return output
+
+    def forward(self, anchor, positive, negative):
+        embedded_anchor = self.embedding(anchor)
+        embedded_positive = self.embedding(positive)
+        embedded_negative = self.embedding(negative)
+        return embedded_anchor, embedded_positive, embedded_negative
 
 
 def main(train_args, TEST_MODE=False):
     # 1. 设置好optimizer
     # 2. 定义好model
     args = train_args
-    all_gestures = list(range(20))
+    all_gestures = list(range(8))
 
-    model = C3D(len(all_gestures))
+    model = SiameseC3D(len(all_gestures))
     name = args['name']
     sub_folder = args['sub_folder']
 
-    from emg.utils import config_tensorboard
-    tensorboard_cb = config_tensorboard(name, sub_folder)
+    # from emg.utils import config_tensorboard
+    # tensorboard_cb = config_tensorboard(name, sub_folder)
+    #
+    # from emg.utils.lr_scheduler import DecayLR
+    # lr_callback = DecayLR(start_lr=args['lr'], gamma=0.5, step_size=args['lr_step'])
 
-    from emg.utils.lr_scheduler import DecayLR
-    lr_callback = DecayLR(start_lr=args['lr'], gamma=0.5, step_size=args['lr_step'])
+    net = SiameseEMG(module=model,
+                     model_name=name,
+                     sub_folder=sub_folder,
+                     hyperparamters=args,
+                     optimizer=torch.optim.Adam,
+                     gesture_list=[],
+                     callbacks=[])
 
-    net = EMGClassifier(module=model,
-                        model_name=name,
-                        sub_folder=sub_folder,
-                        hyperparamters=args,
-                        optimizer=torch.optim.Adam,
-                        gesture_list=all_gestures,
-                        callbacks=[tensorboard_cb, lr_callback])
+    net = train(net)
 
-    # net = train(net, all_gestures)
-
-    net = test(net, all_gestures)
+    # net = test(net, all_gestures)
 
     # test_gestures = all_gestures[0:1]
     # net = test(net, test_gestures)
@@ -109,39 +115,45 @@ def main(train_args, TEST_MODE=False):
     # net = test(net, test_gestures)
 
 
-def train(net: EMGClassifier, gesture_indices: list):
-    train_set = CapgDataset(gestures_label_map=net.gesture_map,
+def train(net: SiameseEMG):
+    gesture_list = list(range(8))
+    train_set = CapgTriplet(gesture_list,
                             sequence_len=10,
                             frame_x=True,
-                            gesture_list=gesture_indices,
                             train=True)
     net.dataset = train_set
     net.fit_with_dataset()
     return net
 
 
-def test(net: EMGClassifier, gesture_indices: list):
-    test_set = CapgDataset(gestures_label_map=net.gesture_map,
-                           sequence_len=10,
-                           frame_x=True,
-                           gesture_list=gesture_indices,
-                           train=False)
-
-    avg_score = net.test_model(gesture_indices, test_set)
-    print('test accuracy: {:.4f}'.format(avg_score))
-    return net
+# def test(net: SiameseEMG):
+#     gesture_list = list(range(8))
+#     test_set = CapgTriplet(gesture_list,
+#                            sequence_len=10,
+#                            frame_x=True,
+#                            train=False)
+#
+#     avg_score = net.test_model(gesture_indices, test_set)
+#     print('test accuracy: {:.4f}'.format(avg_score))
+#     return net
 
 
 if __name__ == "__main__":
     test_args = {
         'model': 'c3d',
-        'name': '20Gesture_Pick',
-        'sub_folder': 'C3D',
-        'epoch': 3,
+        'name': 'siamese-c3d',
+        'sub_folder': 'test1',
+        'epoch': 1,
         'train_batch_size': 256,
         'valid_batch_size': 1024,
         'lr': 0.001,
         'lr_step': 5}
 
     print('test')
+    # default_name = test_args['model'] + '-{}'.format(test_args['suffix'])
+    # test_args['name'] = default_name
+    # test_args['name'] = '8Gesture_Compare'
+    # test_args['name'] = '12Gesture_Compare'
+    # test_args['name'] = '20Gesture_Compare'
     main(test_args)
+

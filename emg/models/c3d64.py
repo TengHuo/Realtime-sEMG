@@ -39,12 +39,13 @@ class C3D64(nn.Module):
         # self.conv5b = nn.Conv3d(512, 512, kernel_size=(3, 3, 3), padding=(1, 1, 1))
         # self.pool5 = nn.MaxPool3d(kernel_size=(2, 2, 2), stride=(2, 2, 2), padding=(1, 1, 1))
 
-        self.fc6 = nn.Linear(2048, 1024)
-        self.fc7 = nn.Linear(1024, 1024)
-        self.fc8 = nn.Linear(1024, output_size)
+        self.fc6 = nn.Linear(512, 256)
+        self.fc7 = nn.Linear(256, 128)
+        self.fc8 = nn.Linear(128, output_size)
 
     def forward(self, x):
-
+        # print('SIZE1:')
+        # print(x.size())
         x = F.relu(self.conv1(x))
         x = self.pool1(x)
 
@@ -54,16 +55,20 @@ class C3D64(nn.Module):
         x = F.relu(self.conv3a(x))
         x = F.relu(self.conv3b(x))
         x = self.pool3(x)
+        # print('SIZE2:')
+        # print(x.size())
 
         x = F.relu(self.conv4a(x))
         x = F.relu(self.conv4b(x))
         x = self.pool4(x)
+        # print('SIZE3:')
+        # print(x.size())
 
         # x = F.relu(self.conv5a(x))
         # x = F.relu(self.conv5b(x))
         # x = self.pool5(x)
 
-        x = x.view(-1, 2048)
+        x = x.view(-1, 512)
         x = F.relu(self.fc6(x))
         x = F.dropout(x, p=0.2)
 
@@ -83,11 +88,11 @@ def main(train_args, TEST_MODE=False):
     name = args['name']
     sub_folder = args['sub_folder']
 
-    from emg.utils import config_tensorboard
-    tensorboard_cb = config_tensorboard(name, sub_folder)
-
-    from emg.utils.lr_scheduler import DecayLR
-    lr_callback = DecayLR(start_lr=args['lr'], gamma=0.5, step_size=args['lr_step'])
+    # from emg.utils import config_tensorboard
+    # tensorboard_cb = config_tensorboard(name, sub_folder)
+    #
+    # from emg.utils.lr_scheduler import DecayLR
+    # lr_callback = DecayLR(start_lr=args['lr'], gamma=0.5, step_size=args['lr_step'])
 
     net = EMGClassifier(module=model,
                         model_name=name,
@@ -95,7 +100,7 @@ def main(train_args, TEST_MODE=False):
                         hyperparamters=args,
                         optimizer=torch.optim.Adam,
                         gesture_list=all_gestures,
-                        callbacks=[tensorboard_cb, lr_callback])
+                        callbacks=[])
 
     net = train(net, all_gestures)
 
@@ -149,15 +154,13 @@ def test(net: EMGClassifier, gesture_indices: list):
 if __name__ == "__main__":
     test_args = {
         'model': 'c3d64',
-        'suffix': 'test',
-        'sub_folder': 'test8',
-        'epoch': 3,
-        'train_batch_size': 64,
+        'name': 'c3d-upscale',
+        'sub_folder': 'size24-test2',
+        'epoch': 60,
+        'train_batch_size': 128,
         'valid_batch_size': 512,
         'lr': 0.001,
         'lr_step': 5}
 
     print('test')
-    default_name = test_args['model'] + '-{}'.format(test_args['suffix'])
-    test_args['name'] = default_name
     main(test_args)

@@ -15,8 +15,9 @@ import importlib
 
 @click.command()
 @click.argument('model', type=click.Choice(['lstm', 'seq2seq', 'mlp', 'cnn', 'c3d']))
-@click.option('--suffix', type=str,  help='model name suffix')
+@click.option('--name', type=str,  help='model name suffix')
 @click.option('--sub_folder', type=str, help='sub-folder for saving checkpoints files and tensorboard log')
+@click.option('--dataset', type=str, help='sub-folder for saving checkpoints files and tensorboard log')
 @click.option('--gesture_num', type=int, help='gesture number of classifier')
 @click.option('--epoch', default=60, help='maximum epoch')
 @click.option('--train_batch_size', default=128, help='')
@@ -29,8 +30,6 @@ def main(**args):
     model = importlib.import_module(module_name)
     print('Train a new model: {}'.format(args['model']))
 
-    # default_name = args['model'] + '-{}'.format(args['suffix'])
-    args['name'] = args['suffix']
     model.main(args)
 
 

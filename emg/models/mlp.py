@@ -14,8 +14,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from emg.models.base import EMGClassifier
-from emg.utils import config_tensorboard
 from emg.data_loader.capg_data import CapgDataset
+from emg.data_loader.csl_data import CSLDataset
 
 
 class MLP(nn.Module):
@@ -39,8 +39,13 @@ class MLP(nn.Module):
         return x
 
 
-hyperparameters = {
+capg_args = {
     'input_size': 128,
+    'hidden_size': 256
+}
+
+csl_args = {
+    'input_size': 168,
     'hidden_size': 256
 }
 
@@ -48,17 +53,21 @@ hyperparameters = {
 def main(train_args, TEST_MODE=False):
     # 1. 设置好optimizer
     # 2. 定义好model
-    args = {**train_args, **hyperparameters}
-    all_gestures = list(range(20))
+    if train_args['dataset'] == 'capg':
+        args = {**train_args, **capg_args}
+    else:
+        args = {**train_args, **csl_args}
+    all_gestures = list(range(args['gesture_num']))
     # all_gestures = list(range(0, 20))
     model = MLP(args['input_size'], args['hidden_size'], len(all_gestures))
     name = args['name']
     sub_folder = args['sub_folder']
 
-    tensorboard_cb = config_tensorboard(name, sub_folder, model, (1, 128))
+    # from emg.utils import config_tensorboard
+    # tensorboard_cb = config_tensorboard(name, sub_folder, model, (1, 128))
 
-    from emg.utils.lr_scheduler import DecayLR
-    lr_callback = DecayLR(start_lr=args['lr'], gamma=0.5, step_size=args['lr_step'])
+    # from emg.utils.lr_scheduler import DecayLR
+    # lr_callback = DecayLR(start_lr=args['lr'], gamma=0.5, step_size=args['lr_step'])
 
     net = EMGClassifier(module=model,
                         model_name=name,
@@ -66,9 +75,9 @@ def main(train_args, TEST_MODE=False):
                         hyperparamters=args,
                         optimizer=torch.optim.Adam,
                         gesture_list=all_gestures,
-                        callbacks=[tensorboard_cb, lr_callback])
+                        callbacks=[])
 
-    # net = train(net, all_gestures)
+    net = train(net, all_gestures)
 
     net = test(net, all_gestures)
 
@@ -83,20 +92,30 @@ def main(train_args, TEST_MODE=False):
 
 
 def train(net: EMGClassifier, gesture_indices: list):
-    train_set = CapgDataset(gestures_label_map=net.gesture_map,
-                            sequence_len=1,
-                            gesture_list=gesture_indices,
-                            train=True)
+    if net.hyperparamters['dataset'] == 'capg':
+        train_set = CapgDataset(gestures_label_map=net.gesture_map,
+                                sequence_len=1,
+                                gesture_list=gesture_indices,
+                                train=True)
+    else:
+        train_set = CSLDataset(gesture=8,
+                               sequence_len=1,
+                               train=True)
     net.dataset = train_set
     net.fit_with_dataset()
     return net
 
 
 def test(net: EMGClassifier, gesture_indices: list):
-    test_set = CapgDataset(gestures_label_map=net.gesture_map,
-                           sequence_len=1,
-                           gesture_list=gesture_indices,
-                           train=False)
+    if net.hyperparamters['dataset'] == 'capg':
+        test_set = CapgDataset(gestures_label_map=net.gesture_map,
+                               sequence_len=1,
+                               gesture_list=gesture_indices,
+                               train=False)
+    else:
+        test_set = CSLDataset(gesture=8,
+                              sequence_len=1,
+                              train=False)
 
     avg_score = net.test_model(gesture_indices, test_set)
     print('test accuracy: {:.4f}'.format(avg_score))
@@ -106,9 +125,10 @@ def test(net: EMGClassifier, gesture_indices: list):
 if __name__ == "__main__":
     test_args = {
         'model': 'mlp',
-        'suffix': 'test-evaluation',
+        'name': 'CSL-test',
         'sub_folder': 'MLP',
-        'epoch': 30,
+        'epoch': 1,
+        'dataset': 'csl',
         'train_batch_size': 512,
         'valid_batch_size': 2048,
         'lr': 0.001,
@@ -119,6 +139,5 @@ if __name__ == "__main__":
     # test_args['name'] = default_name
     # test_args['name'] = '8Gesture_Compare'
     # test_args['name'] = '12Gesture_Compare'
-    test_args['name'] = '20Gesture_Compare'
 
     main(test_args)
