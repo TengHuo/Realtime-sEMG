@@ -49,14 +49,14 @@ class SiameseLSTM(nn.Module):
         return embedded_anchor, embedded_positive, embedded_negative
 
 
-def main(train_args, TEST_MODE=False):
+def main(train_args):
     # 1. 设置好optimizer
     # 2. 定义好model
     args = {**train_args, **hyperparameters}
     all_gestures = list(range(8))
 
     model = SiameseLSTM(args['input_size'], args['hidden_size'], len(all_gestures),
-                 args['layer'], args['dropout'])
+                        args['layer'], args['dropout'])
     name = args['name']
     sub_folder = args['sub_folder']
 

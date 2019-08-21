@@ -41,7 +41,7 @@ class MLP(nn.Module):
 
 capg_args = {
     'input_size': 128,
-    'hidden_size': 256
+    'hidden_size': 512
 }
 
 csl_args = {
@@ -66,8 +66,8 @@ def main(train_args, TEST_MODE=False):
     # from emg.utils import config_tensorboard
     # tensorboard_cb = config_tensorboard(name, sub_folder, model, (1, 128))
 
-    # from emg.utils.lr_scheduler import DecayLR
-    # lr_callback = DecayLR(start_lr=args['lr'], gamma=0.5, step_size=args['lr_step'])
+    from emg.utils.lr_scheduler import DecayLR
+    lr_callback = DecayLR(start_lr=args['lr'], gamma=0.5, step_size=args['lr_step'])
 
     net = EMGClassifier(module=model,
                         model_name=name,
@@ -75,7 +75,7 @@ def main(train_args, TEST_MODE=False):
                         hyperparamters=args,
                         optimizer=torch.optim.Adam,
                         gesture_list=all_gestures,
-                        callbacks=[])
+                        callbacks=[lr_callback])
 
     net = train(net, all_gestures)
 
@@ -125,14 +125,15 @@ def test(net: EMGClassifier, gesture_indices: list):
 if __name__ == "__main__":
     test_args = {
         'model': 'mlp',
-        'name': 'CSL-test',
-        'sub_folder': 'MLP',
-        'epoch': 1,
-        'dataset': 'csl',
+        'name': 'MLP-Unit-Test',
+        'sub_folder': 'size-512',
+        'gesture_num': 8,
+        'epoch': 200,
+        'dataset': 'capg',
         'train_batch_size': 512,
         'valid_batch_size': 2048,
         'lr': 0.001,
-        'lr_step': 10}
+        'lr_step': 40}
 
     print('test')
     # default_name = test_argsg['model'] + '-{}'.format(test_args['suffix'])

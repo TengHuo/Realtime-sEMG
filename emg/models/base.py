@@ -68,13 +68,6 @@ class EMGClassifier(NeuralNet):
         self.model_trained = False
         self.model_path = generate_folder('checkpoints', model_name, sub_folder=sub_folder)
 
-        # if train_new_model:
-        #     print('build a new model, init parameters of {}'.format(model_name))
-        #     os.remove(self.model_path)
-        #     self.gesture_map = gesture_list
-        #     self.module.apply(init_parameters)
-        #     self.model_trained = False
-
     def init_model_param(self):
         pass
 

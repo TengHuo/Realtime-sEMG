@@ -86,10 +86,7 @@ class CapgDataset(Dataset):
             X, y = _prepare_data(test_set, gestures_label_map, gesture_list)
 
         y = y.astype(int)
-        if False:  # for test code, only use small part of data
-            self.data, self.targets = X[:64], y[:64]
-        else:
-            self.data, self.targets = X, y
+        self.data, self.targets = X, y
 
     def __getitem__(self, index):
         """
@@ -164,8 +161,8 @@ def random_pick(sequence, length):
 
 def downsampling(sequence, length, rate):
     sequence = sequence[0:1000:rate]
-    # return random_pick(sub_seq, length)
-    return head_pick(sequence, length)
+    return random_pick(sequence, length)
+    # return head_pick(sequence, length)
 
 
 def downscale(sequence, rate):

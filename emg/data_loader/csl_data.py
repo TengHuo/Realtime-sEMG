@@ -270,7 +270,10 @@ if __name__ == '__main__':
     # 3. 用剩余subject的数据测试模型
 
     # test pytorch data loader
-    csl_train_data = CSLDataset(gesture=8, sequence_len=1, train=True)
+    csl_train_data = CSLDataset(gesture=8,
+                                frame_x=True,
+                                sequence_len=10,
+                                train=True)
     print(len(csl_train_data.data))
     print(len(csl_train_data.targets))
 
@@ -280,8 +283,8 @@ if __name__ == '__main__':
     for i_batch, data in enumerate(dataloader):
         print(i_batch)
         print(data[0].size())
-        # print(data[1])
-        # break
+        print(data[1])
+        break
 
     # csl_test_data = CSLDataset(gesture=8, sequence_len=10, train=False)
     # print(len(csl_test_data.data))

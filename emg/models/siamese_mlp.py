@@ -14,7 +14,6 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from emg.models.siamese import SiameseEMG
-from emg.utils import config_tensorboard
 from emg.data_loader.capg_triplet import CapgTriplet
 
 
@@ -48,7 +47,7 @@ hyperparameters = {
 }
 
 
-def main(train_args, TEST_MODE=False):
+def main(train_args):
     # 1. 设置好optimizer
     # 2. 定义好model
     args = {**train_args, **hyperparameters}
@@ -56,6 +55,7 @@ def main(train_args, TEST_MODE=False):
     name = args['name']
     sub_folder = args['sub_folder']
 
+    # from emg.utils import config_tensorboard
     # tensorboard_cb = config_tensorboard(name, sub_folder, model, (1, 128))
 
     # from emg.utils.lr_scheduler import DecayLR
@@ -103,4 +103,4 @@ if __name__ == "__main__":
         'lr_step': 20}
 
     print('test')
-    main(test_args, TEST_MODE=False)
+    main(test_args)

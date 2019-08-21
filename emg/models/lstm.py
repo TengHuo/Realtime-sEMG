@@ -65,9 +65,9 @@ def main(train_args, TEST_MODE=False):
 
     # from emg.utils import config_tensorboard
     # tensorboard_cb = config_tensorboard(name, sub_folder, model, (1, 10, 128))
-    #
-    # from emg.utils.lr_scheduler import DecayLR
-    # lr_callback = DecayLR(start_lr=args['lr'], gamma=0.5, step_size=args['lr_step'])
+
+    from emg.utils.lr_scheduler import DecayLR
+    lr_callback = DecayLR(start_lr=args['lr'], gamma=0.5, step_size=args['lr_step'])
 
     net = EMGClassifier(module=model,
                         model_name=name,
@@ -75,7 +75,7 @@ def main(train_args, TEST_MODE=False):
                         hyperparamters=args,
                         optimizer=torch.optim.Adam,
                         gesture_list=all_gestures,
-                        callbacks=[])
+                        callbacks=[lr_callback])
 
     net = train(net, all_gestures)
 
@@ -98,7 +98,7 @@ def train(net: EMGClassifier, gesture_indices: list):
                                 gesture_list=gesture_indices,
                                 train=True)
     else:
-        train_set = CSLDataset(gesture=8,
+        train_set = CSLDataset(gesture=len(gesture_indices),
                                sequence_len=20,
                                train=True)
     net.dataset = train_set
@@ -113,7 +113,7 @@ def test(net: EMGClassifier, gesture_indices: list):
                                gesture_list=gesture_indices,
                                train=False)
     else:
-        test_set = CSLDataset(gesture=8,
+        test_set = CSLDataset(gesture=len(gesture_indices),
                               sequence_len=20,
                               train=False)
 
@@ -142,15 +142,16 @@ csl_args = {
 if __name__ == "__main__":
     test_args = {
         'model': 'lstm',
-        'name': 'csl-test',
-        'sub_folder': 'test-lstm',
+        'name': 'CSL-Test',
+        'sub_folder': 'LSTM-test4',
         'dataset': 'csl',
         'gesture_num': 8,
-        'epoch': 1,
+        'epoch': 30,
         'train_batch_size': 256,
         'valid_batch_size': 1024,
-        'lr': 0.001,
-        'lr_step': 50}
+        'lr': 0.0001,
+        'lr_step': 5,
+        'stop_patience': 5}
 
     print('test')
     main(test_args)

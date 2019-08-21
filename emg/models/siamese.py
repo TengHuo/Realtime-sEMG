@@ -64,18 +64,6 @@ class SiameseEMG(NeuralNet):
         self.anchors = []
         self.labels = []
 
-        # if continue_train:
-        #     params = self.model_path + 'train_end_params.pt'
-        #     optimizer = self.model_path + 'train_end_optimizer.pt'
-        #     history = self.model_path + 'train_end_history.json'
-        #     if os.path.exists(params) and os.path.exists(optimizer) and os.path.exists(history):
-        #         print('load parameter from a pretrained model')
-        #         self.load_params(f_params=params,
-        #                          f_optimizer=optimizer,
-        #                          f_history=history)
-        #     else:
-        #         raise FileNotFoundError()
-        # else:
         print('build a new model, init parameters of {}'.format(model_name))
         param_dict = self.load_pretrained("pretrained_end_params.pt")
         self.module.load_state_dict(param_dict)
@@ -123,14 +111,6 @@ class SiameseEMG(NeuralNet):
         return default_cb_list
 
     def load_pretrained(self, param_file: str):
-        # pretrained_dict = model_zoo.load_url(model_urls['resnet152'])
-        # model_dict = model.state_dict()
-        # # 将pretrained_dict里不属于model_dict的键剔除掉
-        # pretrained_dict = {k: v for k, v in pretrained_dict.items() if k in model_dict}
-        # # 更新现有的model_dict
-        # model_dict.update(pretrained_dict)
-        # # 加载我们真正需要的state_dict
-        # model.load_state_dict(model_dict)
         dict_path = os.path.join(self.model_path, "..", param_file)
         pretrained_dict = torch.load(dict_path, map_location=self.device)
         model_dict = self.module.state_dict()
@@ -154,21 +134,6 @@ class SiameseEMG(NeuralNet):
     def get_triplet_loss(self, anchor, postive, negative):
         return self.criterion_(anchor, postive, negative)
 
-    # def euclidean_distance(self, anchor, positive, negative):
-    #     # 如果negative-anchor > anchor-positive:
-    #     #     y_pred为0
-    #     # else
-    #     #     y_pred为1
-    #     ####################################
-    #     # 后面需要加一个KNN，每个gesture保存64个sample用来预测gesture
-    #     positive_distance = self.distance(anchor, positive)
-    #     negative_distance = self.distance(anchor, negative)
-    #     margin = negative_distance - positive_distance + 1
-    #     margin[margin > 0] = 0
-    #     margin[margin < 0] = 1
-    #     ####################################
-    #     return margin
-
     def validation_step(self, Xi, yi, **fit_params):
         """Perform a forward step using batched data and return the
         resulting loss.
@@ -191,7 +156,6 @@ class SiameseEMG(NeuralNet):
             anchor, positive, negative = self.triplet_infer(Xi)
             loss = self.get_triplet_loss(anchor, positive, negative)
 
-            # TODO: 重写y_pred，直接预测gesture的id
             # y_pred = self.euclidean_distance(anchor, positive, negative)
             if not self.clf_fit:
                 self.labels = self.labels.ravel()
@@ -271,103 +235,3 @@ class SiameseEMG(NeuralNet):
         x = None
         y = None
         return super(SiameseEMG, self).fit(x, y)
-
-    # def evaluation_step(self, Xi, training=False):
-    #     """Perform a forward step to produce the output used for
-    #     prediction and scoring.
-    #
-    #     Therefore the module is set to evaluation mode by default
-    #     beforehand which can be overridden to re-enable features
-    #     like dropout by setting ``training=True``.
-    #
-    #     """
-    #     with torch.set_grad_enabled(training):
-    #         self.module_.train(training)
-    #         return self.infer(Xi)
-
-    # def predict_proba(self, X):
-    #     """Where applicable, return probability estimates for
-    #     samples.
-    #
-    #     If the module's forward method returns multiple outputs as a
-    #     tuple, it is assumed that the first output contains the
-    #     relevant information and the other values are ignored. If all
-    #     values are relevant, consider using
-    #     :func:`~skorch.NeuralNet.forward` instead.
-    #
-    #     Parameters
-    #     ----------
-    #     X : input data, compatible with skorch.dataset.Dataset
-    #       By default, you should be able to pass:
-    #
-    #         * numpy arrays
-    #         * torch tensors
-    #         * pandas DataFrame or Series
-    #         * scipy sparse CSR matrices
-    #         * a dictionary of the former three
-    #         * a list/tuple of the former three
-    #         * a Dataset
-    #
-    #       If this doesn't work with your data, you have to pass a
-    #       ``Dataset`` that can deal with the data.
-    #
-    #     Returns
-    #     -------
-    #     y_proba : numpy ndarray
-    #
-    #     """
-    #     # Only the docstring changed from parent.
-    #     # pylint: disable=useless-super-delegation
-    #     return super().predict_proba(X)
-
-    # def predict(self, X):
-    #     """Where applicable, return class labels for samples in X.
-    #
-    #     If the module's forward method returns multiple outputs as a
-    #     tuple, it is assumed that the first output contains the
-    #     relevant information and the other values are ignored. If all
-    #     values are relevant, consider using
-    #     :func:`~skorch.NeuralNet.forward` instead.
-    #
-    #     Parameters
-    #     ----------
-    #     X : input data, compatible with skorch.dataset.Dataset
-    #       By default, you should be able to pass:
-    #
-    #         * numpy arrays
-    #         * torch tensors
-    #         * pandas DataFrame or Series
-    #         * scipy sparse CSR matrices
-    #         * a dictionary of the former three
-    #         * a list/tuple of the former three
-    #         * a Dataset
-    #
-    #       If this doesn't work with your data, you have to pass a
-    #       ``Dataset`` that can deal with the data.
-    #
-    #     Returns
-    #     -------
-    #     y_pred : numpy ndarray
-    #
-    #     """
-    #     y_preds = []
-    #     for yp in self.forward_iter(X, training=False):
-    #         yp = yp[0] if isinstance(yp, tuple) else yp
-    #         y_preds.append(to_numpy(yp.max(-1)[-1]))
-    #     y_pred = np.concatenate(y_preds, 0)
-    #     return y_pred
-
-    # def test_model(self, test_set):
-    #     test_dataloader = DataLoader(dataset=test_set,
-    #                                  batch_size=1024,
-    #                                  shuffle=False,
-    #                                  num_workers=4)
-    #     all_score = []
-    #     for step, (batch_x, batch_y) in enumerate(test_dataloader):
-    #         y_pred = self.evaluation_step(batch_x)
-    #         y_pred = to_numpy(y_pred.max(-1)[-1])
-    #         score = accuracy_score(batch_y, y_pred)
-    #         all_score.append(score)
-    #     avg_score = np.average(all_score)
-    #     save_evaluation(self.model_path, avg_score)
-    #     return avg_score

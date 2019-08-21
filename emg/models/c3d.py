@@ -81,8 +81,8 @@ def main(train_args, TEST_MODE=False):
     name = args['name']
     sub_folder = args['sub_folder']
 
-    from emg.utils import config_tensorboard
-    tensorboard_cb = config_tensorboard(name, sub_folder)
+    # from emg.utils import config_tensorboard
+    # tensorboard_cb = config_tensorboard(name, sub_folder)
 
     from emg.utils.lr_scheduler import DecayLR
     lr_callback = DecayLR(start_lr=args['lr'], gamma=0.5, step_size=args['lr_step'])
@@ -93,9 +93,9 @@ def main(train_args, TEST_MODE=False):
                         hyperparamters=args,
                         optimizer=torch.optim.Adam,
                         gesture_list=all_gestures,
-                        callbacks=[tensorboard_cb, lr_callback])
+                        callbacks=[lr_callback])
 
-    # net = train(net, all_gestures)
+    net = train(net, all_gestures)
 
     net = test(net, all_gestures)
 

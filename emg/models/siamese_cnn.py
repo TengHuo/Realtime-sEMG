@@ -172,4 +172,4 @@ if __name__ == "__main__":
     # default_name = test_args['model'] + '-{}'.format(test_args['suffix'])
     # test_args['name'] = '8Gesture_Compare'
     # test_args['name'] = '12Gesture_Compare'
-    main(test_args, TEST_MODE=False)
+    main(test_args)

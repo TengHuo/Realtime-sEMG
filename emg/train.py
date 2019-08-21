@@ -14,14 +14,14 @@ import importlib
 
 
 @click.command()
-@click.argument('model', type=click.Choice(['lstm', 'seq2seq', 'mlp', 'cnn', 'c3d']))
+@click.argument('model', type=click.Choice(['lstm', 'mlp', 'cnn', 'c3d', 'c3d_csl']))
 @click.option('--name', type=str,  help='model name suffix')
 @click.option('--sub_folder', type=str, help='sub-folder for saving checkpoints files and tensorboard log')
 @click.option('--dataset', type=str, help='sub-folder for saving checkpoints files and tensorboard log')
 @click.option('--gesture_num', type=int, help='gesture number of classifier')
 @click.option('--epoch', default=60, help='maximum epoch')
-@click.option('--train_batch_size', default=128, help='')
-@click.option('--valid_batch_size', default=512, help='')
+@click.option('--train_batch_size', default=128)
+@click.option('--valid_batch_size', default=512)
 @click.option('--lr', default=0.001, help='learning rate')
 @click.option('--lr_step', type=int, help='learning rate decay step size')
 @click.option('--stop_patience', type=int, help='early stop patience')
