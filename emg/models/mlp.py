@@ -51,8 +51,6 @@ csl_args = {
 
 
 def main(train_args, TEST_MODE=False):
-    # 1. 设置好optimizer
-    # 2. 定义好model
     if train_args['dataset'] == 'capg':
         args = {**train_args, **capg_args}
     else:

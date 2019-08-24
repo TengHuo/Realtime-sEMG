@@ -72,8 +72,6 @@ class C3D(nn.Module):
 
 
 def main(train_args, TEST_MODE=False):
-    # 1. 设置好optimizer
-    # 2. 定义好model
     args = train_args
     all_gestures = list(range(20))
 

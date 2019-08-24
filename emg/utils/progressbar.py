@@ -5,8 +5,8 @@
 # @Email    : teng_huo@outlook.com
 # @Version  : 1.0.0
 # @License  : MIT
-#
-#
+# The progressbar for skorch
+# comes from skorch library
 
 
 import numpy as np

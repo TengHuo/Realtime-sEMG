@@ -1,3 +1,0 @@
-#!/usr/bin/env bash
-
-nvidia-docker run -it -v $(pwd):/code -p 7777:8888 teng/emg:gpu

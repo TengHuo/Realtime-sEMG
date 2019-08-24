@@ -1,6 +1,6 @@
 #! /bin/bash
 
-## Train models for classifying 8-20 gestures in CSL dataset
+## Train models for classifying first 8 gestures in CSL dataset
 
 # LSTM model ########################################################################
 python -m emg.train lstm \

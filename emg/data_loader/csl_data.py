@@ -263,12 +263,6 @@ def _read_one_mat_file(file_tuple):
 
 
 if __name__ == '__main__':
-    # 根据subject读取数据，证明针对一个人的预训练模型在其他subject的数据上表现未必足够好
-    # 实验设计
-    # 1. 在capg数据上预训练模型（或者载入训练好的模型）
-    # 2. 在csl的部分数据上训练模型
-    # 3. 用剩余subject的数据测试模型
-
     # test pytorch data loader
     csl_train_data = CSLDataset(gesture=8,
                                 frame_x=True,
