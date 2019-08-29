@@ -73,7 +73,12 @@ class C3D(nn.Module):
 
 def main(train_args, TEST_MODE=False):
     args = train_args
-    all_gestures = list(range(20))
+    if args['gesture_num'] == 8:
+        all_gestures = list(range(8))
+    elif args['gesture_num'] == 12:
+        all_gestures = list(range(8, 20))
+    else:
+        all_gestures = list(range(args['gesture_num']))
 
     model = C3D(len(all_gestures))
     name = args['name']
@@ -93,10 +98,11 @@ def main(train_args, TEST_MODE=False):
                         gesture_list=all_gestures,
                         callbacks=[lr_callback])
 
-    net = train(net, all_gestures)
+    if not TEST_MODE:
+        net = train(net, all_gestures)
 
-    net = test(net, all_gestures)
-
+    confusion_matrx = test(net, all_gestures)
+    return confusion_matrx
     # test_gestures = all_gestures[0:1]
     # net = test(net, test_gestures)
     #
@@ -125,9 +131,9 @@ def test(net: EMGClassifier, gesture_indices: list):
                            gesture_list=gesture_indices,
                            train=False)
 
-    avg_score = net.test_model(gesture_indices, test_set)
+    avg_score, matrix = net.test_model(gesture_indices, test_set)
     print('test accuracy: {:.4f}'.format(avg_score))
-    return net
+    return matrix
 
 
 if __name__ == "__main__":
@@ -135,6 +141,8 @@ if __name__ == "__main__":
         'model': 'c3d',
         'name': '20Gesture_Pick',
         'sub_folder': 'C3D',
+        'dataset': 'csl',
+        'gesture_num': 8,
         'epoch': 3,
         'train_batch_size': 256,
         'valid_batch_size': 1024,

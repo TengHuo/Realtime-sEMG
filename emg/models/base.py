@@ -257,7 +257,7 @@ class EMGClassifier(NeuralNet):
         matrix = confusion_matrix(y_true_all, y_pred_all, labels)
         print(matrix)
         save_evaluation(self.model_path, str(test_gestures), matrix, avg_score)
-        return avg_score
+        return avg_score, matrix
 
     @property
     def gesture_map(self):

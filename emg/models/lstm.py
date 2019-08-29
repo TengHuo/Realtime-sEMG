@@ -54,7 +54,12 @@ def main(train_args, TEST_MODE=False):
         args = {**train_args, **capg_args}
     else:
         args = {**train_args, **csl_args}
-    all_gestures = list(range(args['gesture_num']))
+    if args['gesture_num'] == 8:
+        all_gestures = list(range(8))
+    elif args['gesture_num'] == 12:
+        all_gestures = list(range(8, 20))
+    else:
+        all_gestures = list(range(args['gesture_num']))
 
     model = LSTM(args['input_size'], args['hidden_size'], len(all_gestures),
                  args['layer'], args['dropout'])
@@ -75,10 +80,11 @@ def main(train_args, TEST_MODE=False):
                         gesture_list=all_gestures,
                         callbacks=[lr_callback])
 
-    net = train(net, all_gestures)
+    if not TEST_MODE:
+        net = train(net, all_gestures)
 
-    _ = test(net, all_gestures)
-
+    confusion_matrx = test(net, all_gestures)
+    return confusion_matrx
     # test_gestures = all_gestures[0:1]
     # net = test(net, test_gestures)
     #
@@ -115,9 +121,9 @@ def test(net: EMGClassifier, gesture_indices: list):
                               sequence_len=20,
                               train=False)
 
-    avg_score = net.test_model(gesture_indices, test_set)
+    avg_score, matrix = net.test_model(gesture_indices, test_set)
     print('test accuracy: {:.4f}'.format(avg_score))
-    return net
+    return matrix
 
 
 capg_args = {
